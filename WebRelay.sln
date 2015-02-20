@@ -1,0 +1,83 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2036
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebRelay", "App\WebRelay.csproj", "{B98493BC-A4B5-4474-9E8B-028E91572392}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebRelayServer", "Server\WebRelayServer.csproj", "{5237A6A4-6374-4A52-8712-83152950BA9D}"
+EndProject
+Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "relay", "http://localhost/relay", "{6BBFA176-49CB-4917-9B74-A59B16E57303}"
+	ProjectSection(WebsiteProperties) = preProject
+		UseIISExpress = "false"
+		TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.7.1"
+		ProjectReferences = "{5237a6a4-6374-4a52-8712-83152950ba9d}|SocketRelay.dll;"
+		Debug.AspNetCompiler.VirtualPath = "/relay"
+		Debug.AspNetCompiler.PhysicalPath = "www\"
+		Debug.AspNetCompiler.TargetPath = "PrecompiledWeb\relay\"
+		Debug.AspNetCompiler.Updateable = "true"
+		Debug.AspNetCompiler.ForceOverwrite = "true"
+		Debug.AspNetCompiler.FixedNames = "false"
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.VirtualPath = "/relay"
+		Release.AspNetCompiler.PhysicalPath = "www\"
+		Release.AspNetCompiler.TargetPath = "PrecompiledWeb\relay\"
+		Release.AspNetCompiler.Updateable = "true"
+		Release.AspNetCompiler.ForceOverwrite = "true"
+		Release.AspNetCompiler.FixedNames = "false"
+		Release.AspNetCompiler.Debug = "False"
+		SlnRelativePath = "www\"
+	EndProjectSection
+	ProjectSection(WebsiteProperties) = preProject
+		UseIISExpress = "false"
+		TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.6"
+		ProjectReferences = "{5237a6a4-6374-4a52-8712-83152950ba9d}|SocketRelay.dll;"
+		Debug.AspNetCompiler.VirtualPath = "/relay"
+		Debug.AspNetCompiler.PhysicalPath = "www\"
+		Debug.AspNetCompiler.TargetPath = "PrecompiledWeb\relay\"
+		Debug.AspNetCompiler.Updateable = "true"
+		Debug.AspNetCompiler.ForceOverwrite = "true"
+		Debug.AspNetCompiler.FixedNames = "false"
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.VirtualPath = "/relay"
+		Release.AspNetCompiler.PhysicalPath = "www\"
+		Release.AspNetCompiler.TargetPath = "PrecompiledWeb\relay\"
+		Release.AspNetCompiler.Updateable = "true"
+		Release.AspNetCompiler.ForceOverwrite = "true"
+		Release.AspNetCompiler.FixedNames = "false"
+		Release.AspNetCompiler.Debug = "False"
+		SlnRelativePath = "www\"
+	EndProjectSection
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{7BF91F10-4655-4B6F-9585-051F09830F65}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{B98493BC-A4B5-4474-9E8B-028E91572392}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B98493BC-A4B5-4474-9E8B-028E91572392}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B98493BC-A4B5-4474-9E8B-028E91572392}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B98493BC-A4B5-4474-9E8B-028E91572392}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5237A6A4-6374-4A52-8712-83152950BA9D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5237A6A4-6374-4A52-8712-83152950BA9D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5237A6A4-6374-4A52-8712-83152950BA9D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5237A6A4-6374-4A52-8712-83152950BA9D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6BBFA176-49CB-4917-9B74-A59B16E57303}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6BBFA176-49CB-4917-9B74-A59B16E57303}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6BBFA176-49CB-4917-9B74-A59B16E57303}.Release|Any CPU.ActiveCfg = Debug|Any CPU
+		{6BBFA176-49CB-4917-9B74-A59B16E57303}.Release|Any CPU.Build.0 = Debug|Any CPU
+		{7BF91F10-4655-4B6F-9585-051F09830F65}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7BF91F10-4655-4B6F-9585-051F09830F65}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7BF91F10-4655-4B6F-9585-051F09830F65}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7BF91F10-4655-4B6F-9585-051F09830F65}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {3EC6768E-87E0-4891-AE80-4D2F09151B75}
+	EndGlobalSection
+EndGlobal
