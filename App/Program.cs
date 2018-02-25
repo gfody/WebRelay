@@ -72,7 +72,7 @@ namespace WebRelay
 						new UnParserSettings() { PreferShortName = true }, new Options { InputFile = "[filename]", ContentType = "text/plain", ListenPrefix = null, MaxConnections = null });
 
 					yield return new Example("Relay to a remote host",
-						new Options { InputFile = "input.dat", ListenPrefix = null, MaxConnections = null, RemoteHost = "fy.lc" });
+						new UnParserSettings() { PreferShortName = true }, new Options { InputFile = "input.dat", ListenPrefix = null, MaxConnections = null, RemoteHost = "ws://fy.lc" });
 
 					yield return new Example("Install as service",
 						new UnParserSettings() { PreferShortName = true }, new Options { Install = true, ListenPrefix = null, MaxConnections = null, Username = "[DOMAIN\\User]", Password = "[password]" });
