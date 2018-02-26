@@ -33,26 +33,29 @@ namespace WebRelay
 			[Option('r', "remoteHost", HelpText = "Remote instance to relay through instead of listening on this machine (e.g.: ws://fy.lc)")]
 			public string RemoteHost { get; set; } = ConfigurationManager.AppSettings["remoteHost"];
 
-			[Option('f', "filename", HelpText = "Value to be used in content-disposition header, if blank content-disposition is inline")]
+			[Option('f', "filename", HelpText = "Value to be used in content-disposition header, defaults to input filename unless --inline is specified")]
 			public string Filename { get; set; }
 
-			[Option('c', "contentType", HelpText = "Value to be used in content-type header, required if streaming and filename is blank")]
+			[Option('i', "inline", HelpText = "Use inline content-disposition (no download prompt)")]
+			public bool Inline { get; set; }
+
+			[Option('c', "contentType", HelpText = "Value to be used in content-type header, defaults to \"text/plain\" if filename is blank")]
 			public string ContentType { get; set; }
 
 			[Option('m', "maxConnections", Default = 8, HelpText = "Max concurrent connections")]
 			public int? MaxConnections { get; set; } = int.Parse(ConfigurationManager.AppSettings["maxConnections"] ?? "8");
 
-			[Option('i', "install", HelpText = "Install service")]
+			[Option("install", HelpText = "Install service")]
 			public bool Install { get; set; }
-
-			[Option('u', "username", Default = "LocalSystem", HelpText = "Username for service")]
-			public string Username { get; set; }
-
-			[Option('p', "password", HelpText = "Password for service user if necessary")]
-			public string Password { get; set; }
 
 			[Option("uninstall", HelpText = "Uninstall service")]
 			public bool Uninstall { get; set; }
+
+			[Option("username", Default = "LocalSystem", HelpText = "Username for service")]
+			public string Username { get; set; }
+
+			[Option("password", HelpText = "Password for service user if necessary")]
+			public string Password { get; set; }
 
 			[Option("service", Hidden = true)]
 			public bool Service { get; set; } // secret argument to start in service mode
@@ -75,9 +78,12 @@ namespace WebRelay
 						new UnParserSettings() { PreferShortName = true }, new Options { InputFile = "input.dat", ListenPrefix = null, MaxConnections = null, RemoteHost = "ws://fy.lc" });
 
 					yield return new Example("Install as service",
-						new UnParserSettings() { PreferShortName = true }, new Options { Install = true, ListenPrefix = null, MaxConnections = null, Username = "[DOMAIN\\User]", Password = "[password]" });
+						new Options { Install = true, ListenPrefix = null, MaxConnections = null, Username = "[DOMAIN\\User]", Password = "[password]" });
 				}
 			}
+
+			public string FinalFilename => Inline ? "" : (Filename ?? InputFile);
+			public string FinalContentType => string.IsNullOrEmpty(ContentType) ? Filename?.GuessMimeType() ?? InputFile?.GuessMimeType() ?? "text/plain" : ContentType;
 		}
 
 		private static void Main(string[] args)
@@ -171,14 +177,14 @@ namespace WebRelay
 
 			if (!string.IsNullOrEmpty(options.RemoteHost))
 			{
-				relay = new SocketRelayClient(new Uri(options.RemoteHost), stream, out code, options.Filename ?? options.InputFile, options.ContentType);
+				relay = new SocketRelayClient(new Uri(options.RemoteHost), stream, out code, options.FinalFilename, options.FinalContentType);
 				urlbase = options.RemoteHost.Replace("ws", "http");
 			}
 			else if (AlreadyListening()) // if something is listening on the requested port, assume it's our service and try to connect to it..
 			{
 				try
 				{
-					relay = new SocketRelayClient(new Uri(urlbase.Replace("http", "ws")), stream, out code, options.Filename ?? options.InputFile, options.ContentType);
+					relay = new SocketRelayClient(new Uri(urlbase.Replace("http", "ws")), stream, out code, options.FinalFilename, options.FinalContentType);
 				}
 				catch (Exception e)
 				{
@@ -188,7 +194,7 @@ namespace WebRelay
 			}
 			else
 			{
-				relay = new LocalRelay(stream, options.Filename ?? options.InputFile, options.ContentType);
+				relay = new LocalRelay(stream, options.FinalFilename, options.FinalContentType);
 				var server = new RelayServer() { EnableBuiltinWebclient = false };
 				code = server.AddRelay(relay);
 				listenTask = server.Listen(options.ListenPrefix, options.MaxConnections.Value, done);
