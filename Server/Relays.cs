@@ -96,7 +96,12 @@ namespace WebRelay
 
 				context.Response.OutputStream.Close();
 			}
-			catch (HttpListenerException e) when ((uint)e.HResult == 0x80004005) // downloader disconnected
+			// Response.OutputStream.Write throws if downloader disconnected..
+			catch (HttpListenerException e) when ((uint)e.HResult == 0x80004005)
+			{
+				disconnected = true;
+			}
+			catch (HttpException e) when ((uint)e.HResult == 0x800704CD)
 			{
 				disconnected = true;
 			}
@@ -303,7 +308,12 @@ namespace WebRelay
 			{
 				completed.SetResult(DownloadResult.Canceled);
 			}
-			catch (HttpListenerException e) when ((uint)e.HResult == 0x80004005) // downloader disconnected
+			// Response.OutputStream.Write throws if downloader disconnected..
+			catch (HttpListenerException e) when ((uint)e.HResult == 0x80004005)
+			{
+				completed.SetResult(DownloadResult.Interrupted);
+			}
+			catch (HttpException e) when ((uint)e.HResult == 0x800704CD)
 			{
 				completed.SetResult(DownloadResult.Interrupted);
 			}
@@ -423,6 +433,13 @@ namespace WebRelay
 			{
 				if (socket.State == WebSocketState.Open)
 					await socket.CloseAsync(WebSocketCloseStatus.Empty, null, CancellationToken.None);
+			}
+			catch (WebSocketException)
+			{
+				if (stream.CanSeek && bytesUploaded < stream.Length)
+					OnCancel?.Invoke();
+				else if (!stream.CanSeek)
+					OnDisconnect?.Invoke();
 			}
 
 			if (!cancel.IsCancellationRequested && stream.CanSeek && bytesUploaded < stream.Length)
