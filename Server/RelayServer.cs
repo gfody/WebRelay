@@ -98,7 +98,7 @@ namespace WebRelay
 			string key = null;
 			try
 			{
-				var timeout = new CancellationTokenSource(new TimeSpan(0, 0, 1));
+				var timeout = new CancellationTokenSource(new TimeSpan(0, 0, 3));
 				string filename = await context.WebSocket.ReceiveString(timeout.Token);
 				long? filesize = null; if (long.TryParse(await context.WebSocket.ReceiveString(timeout.Token), out long size)) filesize = size;
 				string mimetype = await context.WebSocket.ReceiveString(timeout.Token);

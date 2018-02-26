@@ -360,12 +360,11 @@ namespace WebRelay
 			this.stream = stream;
 			var timeout = new CancellationTokenSource(new TimeSpan(0, 0, 3));
 
-			code = socket.ConnectAsync(server, timeout.Token)
-				.ContinueWith(x => socket.SendString(filename ?? "", timeout.Token))
-				.ContinueWith(x => socket.SendString(stream.CanSeek ? stream.Length.ToString() : "", timeout.Token))
-				.ContinueWith(x => socket.SendString(mimetype ?? "", timeout.Token))
-				.ContinueWith(x => socket.ReceiveString(timeout.Token))
-				.Result.Result.Replace("code=", "");
+			socket.ConnectAsync(server, timeout.Token).Wait();
+			socket.SendString(filename ?? "", timeout.Token).Wait();
+			socket.SendString(stream.CanSeek ? stream.Length.ToString() : "", timeout.Token).Wait();
+			socket.SendString(mimetype ?? "", timeout.Token).Wait();
+			code = socket.ReceiveString(timeout.Token).Result.Replace("code=", "");
 
 			listenTask = Task.Factory.StartNew(Run, cancel.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 		}
@@ -513,7 +512,7 @@ namespace WebRelay
 		private static Regex media = new Regex("^video|audio", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
 		public static bool IsAdaptiveStream(this HttpContextBase context) =>
-			ios.IsMatch(context.Request.UserAgent) && media.IsMatch(context.Response.ContentType);
+			ios.IsMatch(context.Request.UserAgent ?? "") && media.IsMatch(context.Response.ContentType ?? "");
 
 		// in adaptive streaming mode the player may have skipped bytes that it didn't need or the user may have seeked to the end, there's no perfect way to detect that they've actually finished downloading but checking that they've downloaded something from the last 3 chunks seems to work well enough..
 		public static bool IsAdaptiveStreamDone(this DownloadProgress progress, long filesize, int chunksize) =>
