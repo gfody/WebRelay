@@ -23,7 +23,7 @@ namespace WebRelay
 		public string AddRelay(IRelay relay)
 		{
 			string code;
-			do code = DownloadCode.Generate(); while (!ActiveRelays.TryAdd(code, relay));
+			do code = DownloadCode.Generate(); while (!activeRelays.TryAdd(code, relay));
 			return code;
 		}
 
@@ -61,11 +61,11 @@ namespace WebRelay
 			}
 		}
 
-		private static ConcurrentDictionary<string, IRelay> ActiveRelays = new ConcurrentDictionary<string, IRelay>();
-		private static DateTime BuildDateFromAssemblyInfo = new DateTime(2000, 1, 1).AddDays(Assembly.GetExecutingAssembly().GetName().Version.Build).AddSeconds(Assembly.GetExecutingAssembly().GetName().Version.Revision * 2).ToUniversalTime();
-		private static byte[] Mainpage = Encoding.UTF8.GetBytes(Resources.main).GZip();
-		private static ConcurrentDictionary<string, Tuple<DateTime, int>> BlockedHosts = new ConcurrentDictionary<string, Tuple<DateTime, int>>();
-		private static Timer BlockedHostsCleanup = new Timer(x => { BlockedHosts.Clear(); }, null, 60000, 60000);
+		private static ConcurrentDictionary<string, IRelay> activeRelays = new ConcurrentDictionary<string, IRelay>();
+		private static DateTime buildDateFromAssemblyInfo = new DateTime(2000, 1, 1).AddDays(Assembly.GetExecutingAssembly().GetName().Version.Build).AddSeconds(Assembly.GetExecutingAssembly().GetName().Version.Revision * 2).ToUniversalTime();
+		private static byte[] mainpage = PrepareMainpage();
+		private static ConcurrentDictionary<string, Tuple<DateTime, int>> blockedHosts = new ConcurrentDictionary<string, Tuple<DateTime, int>>();
+		private static Timer blockedHostsCleanup = new Timer(x => { blockedHosts.Clear(); }, null, 60000, 60000);
 
 		private async Task ServeMainpage(HttpContextBase context, string path)
 		{
@@ -73,15 +73,15 @@ namespace WebRelay
 
 			if (string.IsNullOrEmpty(path))
 			{
-				if (DateTime.TryParse(context.Request.Headers["If-Modified-Since"], out DateTime cache_date) && cache_date.ToUniversalTime().Equals(BuildDateFromAssemblyInfo))
+				if (DateTime.TryParse(context.Request.Headers["If-Modified-Since"], out DateTime cache_date) && cache_date.ToUniversalTime().Equals(buildDateFromAssemblyInfo))
 					context.Response.StatusCode = 304;
 				else
 				{
 					context.Response.AddHeader("Content-Encoding", "gzip");
-					context.Response.AddHeader("Content-Length", Mainpage.Length.ToString());
-					context.Response.AddHeader("Last-Modified", BuildDateFromAssemblyInfo.ToString("R"));
+					context.Response.AddHeader("Content-Length", mainpage.Length.ToString());
+					context.Response.AddHeader("Last-Modified", buildDateFromAssemblyInfo.ToString("R"));
 					context.Response.ContentType = "text/html; charset=utf-8";
-					await context.Response.OutputStream.WriteAsync(Mainpage, 0, Mainpage.Length);
+					await context.Response.OutputStream.WriteAsync(mainpage, 0, mainpage.Length);
 				}
 			}
 			else
@@ -120,7 +120,7 @@ namespace WebRelay
 			finally
 			{
 				if (key != null)
-					ActiveRelays.TryRemove(key, out IRelay x);
+					activeRelays.TryRemove(key, out IRelay x);
 			}
 		}
 
@@ -128,7 +128,7 @@ namespace WebRelay
 		{
 			// block hosts with more than 10 bad requests in the last 10 seconds..
 			// (item1 is last request time, item2 is count of previous requests)
-            if (BlockedHosts.TryGetValue(context.Request.UserHostAddress, out Tuple<DateTime, int> t) && DateTime.UtcNow.Subtract(t.Item1).TotalSeconds < 10 && t.Item2 > 10)
+			if (blockedHosts.TryGetValue(context.Request.UserHostAddress, out Tuple<DateTime, int> t) && DateTime.UtcNow.Subtract(t.Item1).TotalSeconds < 10 && t.Item2 > 10)
 				return;
 
 			if (context.IsWebSocketRequest)
@@ -145,7 +145,7 @@ namespace WebRelay
 
 			// get the corresponding relay or log bad request..
 			// block subsequent requests for the same code that don't come from the original host..
-			if (DownloadCode.Check(code) && ActiveRelays.TryGetValue(code, out IRelay relay) && (string.IsNullOrEmpty(relay.UserHostAddress) || relay.UserHostAddress == context.Request.UserHostAddress))
+			if (DownloadCode.Check(code) && activeRelays.TryGetValue(code, out IRelay relay) && (string.IsNullOrEmpty(relay.UserHostAddress) || relay.UserHostAddress == context.Request.UserHostAddress))
 			{
 				if (context.Request.HttpMethod != "HEAD") // don't let an initial HEAD from a facebook or slack spoil the link
 					relay.UserHostAddress = context.Request.UserHostAddress;
@@ -158,25 +158,42 @@ namespace WebRelay
 				if (EnableBuiltinWebclient)
 					await ServeMainpage(context, path);
 
-				BlockedHosts.AddOrUpdate(context.Request.UserHostAddress, new Tuple<DateTime, int>(DateTime.UtcNow, 1),
+				blockedHosts.AddOrUpdate(context.Request.UserHostAddress, new Tuple<DateTime, int>(DateTime.UtcNow, 1),
 					(k, v) => new Tuple<DateTime, int>(DateTime.UtcNow, DateTime.UtcNow.Subtract(v.Item1).TotalSeconds < 10 ? v.Item2 + 1 : 1));
+			}
+		}
+
+		private static byte[] PrepareMainpage()
+		{
+			// inline images and js and gzip it..
+			var asm = Assembly.GetExecutingAssembly();
+			string prefix = $"{nameof(WebRelay)}.webclient.";
+			string main = Encoding.UTF8.GetString(asm.GetManifestResourceStream($"{prefix}main.html").ToArray());
+
+			foreach (var r in asm.GetManifestResourceNames())
+			{
+				if (r.EndsWith(".js"))
+					main = main.Replace($" src=\"{r.Replace(prefix, "")}\">",
+						$">\r\n{Encoding.UTF8.GetString(asm.GetManifestResourceStream(r).ToArray())}\r\n");
+
+				else if (r.StartsWith($"{prefix}images."))
+					main = main.Replace(r.Replace($"{prefix}images.", ""),
+						$"data:{MimeMapping.GetMimeMapping(Path.GetExtension(r))};base64,{Convert.ToBase64String(asm.GetManifestResourceStream(r).ToArray())}");
+			}
+
+			using (var ms = new MemoryStream())
+			using (var gz = new GZipStream(ms, CompressionLevel.Optimal))
+			{
+				byte[] bytes = Encoding.UTF8.GetBytes(main);
+				gz.Write(bytes, 0, bytes.Length);
+				gz.Close();
+				return ms.ToArray();
 			}
 		}
 	}
 
 	public static partial class Extensions
 	{
-		public static byte[] GZip(this byte[] value)
-		{
-			using (var ms = new MemoryStream())
-			using (var gz = new GZipStream(ms, CompressionLevel.Optimal))
-			{
-				gz.Write(value, 0, value.Length);
-				gz.Close();
-				return ms.ToArray();
-			}
-		}
-
 		public static async Task SendString(this WebSocket socket, string text, CancellationToken cancel) =>
 			await socket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes(text)), WebSocketMessageType.Text, true, cancel);
 
@@ -193,6 +210,15 @@ namespace WebRelay
 			while (!result.EndOfMessage);
 
 			return received == 0 ? null : Encoding.UTF8.GetString(new ArraySegment<byte>(buffer, 0, received).ToArray());
+		}
+
+		public static byte[] ToArray(this Stream stream)
+		{
+			using (var m = new MemoryStream((int)stream.Length))
+			{
+				stream.CopyTo(m);
+				return m.ToArray();
+			}
 		}
 	}
 }

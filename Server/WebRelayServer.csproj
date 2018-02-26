@@ -50,21 +50,14 @@
     <Compile Include="RelayServer.cs" />
     <Compile Include="DownloadCode.cs" />
     <Compile Include="HttpListenerContextWrapper.cs" />
-    <Compile Include="Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
   </ItemGroup>
   <ItemGroup>
-    <EmbeddedResource Include="Resources.resx">
-      <Generator>PublicResXFileCodeGenerator</Generator>
-      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
-      <SubType>Designer</SubType>
-    </EmbeddedResource>
-  </ItemGroup>
-  <ItemGroup>
-    <Content Include="Resources\main.html" />
+    <EmbeddedResource Include="webclient\images\cancel.svg" />
+    <EmbeddedResource Include="webclient\images\file.png" />
+    <EmbeddedResource Include="webclient\images\pug.png" />
+    <EmbeddedResource Include="webclient\images\wait.svg" />
+    <EmbeddedResource Include="webclient\main.html" />
+    <EmbeddedResource Include="webclient\socketrelay.js" />
   </ItemGroup>
   <ItemGroup>
     <Service Include="{82A7F48D-3B50-4B1E-B82E-3ADA8210C358}" />

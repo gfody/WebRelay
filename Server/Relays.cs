@@ -473,6 +473,9 @@ namespace WebRelay
 			string ext = Path.GetExtension(filename);
 			switch (ext.ToLower())
 			{
+				case ".svg":
+					return "image/svg+xml";
+
 				case ".mp4":
 				case ".m4v":
 				case ".mkv":
