@@ -253,7 +253,35 @@ namespace WebRelay
 		}
 
 
-		#region service installer
+		#region service
+
+		public class WebRelayService : ServiceBase
+		{
+			private RelayServer server = new RelayServer();
+			private TaskCompletionSource<bool> stopping = new TaskCompletionSource<bool>();
+			private Task task;
+
+			public void Start() => OnStart(null);
+
+			protected override void OnStart(string[] args)
+			{
+				task = server.Listen(
+					ConfigurationManager.AppSettings["listenPrefix"] ?? "http://*:80/",
+					int.Parse(ConfigurationManager.AppSettings["maxConnections"] ?? "8"),
+					stopping);
+
+				base.OnStart(args);
+			}
+
+			protected override void OnStop()
+			{
+				stopping.SetResult(true);
+
+				base.OnStop();
+			}
+		}
+
+
 		private static void InstallService(Options o)
 		{
 			var path = Assembly.GetEntryAssembly().Location;
@@ -306,6 +334,7 @@ namespace WebRelay
 			if (sc.Status == ServiceControllerStatus.Running) sc.Stop();
 			new ServiceInstaller() { Context = new InstallContext(), ServiceName = nameof(WebRelay) }.Uninstall(null);
 		}
+
 		#endregion
 	}
 }
