@@ -69,7 +69,7 @@ namespace WebRelay
 
 		private async Task ServeMainpage(HttpContextBase context, string path)
 		{
-			context.Response.Headers.Remove("Server");
+			context.Response.AddHeader("Server", "");
 
 			if (string.IsNullOrEmpty(path))
 			{
