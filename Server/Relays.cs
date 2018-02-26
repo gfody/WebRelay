@@ -348,7 +348,7 @@ namespace WebRelay
 		public SocketRelayClient(Uri server, Stream stream, out string code, string filename = null, string mimetype = null)
 		{
 			this.stream = stream;
-			var timeout = new CancellationTokenSource(new TimeSpan(0, 0, 1));
+			var timeout = new CancellationTokenSource(new TimeSpan(0, 0, 3));
 
 			code = socket.ConnectAsync(server, timeout.Token)
 				.ContinueWith(x => socket.SendString(filename ?? "", timeout.Token))
