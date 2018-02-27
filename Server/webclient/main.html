@@ -10,29 +10,29 @@
 	<div style="position:fixed; width:100%; height:100%; top:10%">
 		<div id="drop_zone" style="cursor:pointer; display:table; overflow:hidden; border-radius:50px; border-width:4px; border-style:dashed; border-color:lightgrey; margin:25px; margin-left:auto; margin-right:auto; width:75%; max-width:700px; height:175px">
 			<div style="font-family:Consolas, Menlo, monospace; font-size:28px; text-align:center; display:table-cell; vertical-align:middle">
-				<img id="file_icon" width="64" height="64" style="display:none; vertical-align:middle" src="file.png" />
+				<img id="file_icon" width="64" height="64" style="display:none; vertical-align:middle" alt="" src="file.png" />
 				<span id="file_label">1. Select or drop file..</span>
 			</div>
 		</div>
 		<div style="text-align:center; padding-top:25px">
 			<div style="font-family:Consolas, Menlo, monospace; font-size:22px">
 				<span id="download_url">2. receive single-use download link</span>
-				<span id="copy_url" title="copy link to clipboard" style="cursor:pointer; display:none">&#x1F4CB</span>
+				<span id="copy_url" title="copy link to clipboard" style="cursor:pointer; display:none">&#x1F4CB;</span>
 				<span id="download_hint" style="font-size:14px; color:gray"><br>(transfer will begin when this link is visited, you must keep your browser open)</span>
 			</div>
 			<div id="progress_div" style="display:none; margin:10px">
 				<span id="progress_label" style="font-family:Consolas, Menlo, monospace; font-size:16px; color:gray"></span>
 				<br>
 				<progress id="progress_bar" max="100" value="0" style="width:275px; height:32px"></progress>
-				<img id="cancel_button" title="cancel transfer" width="28" height="28" style="cursor:pointer" src="cancel.svg" />
+				<img id="cancel_button" title="cancel transfer" width="28" height="28" style="cursor:pointer" alt="" src="cancel.svg" />
 			</div>
 		</div>
 	</div>
 
 	<input id="file_dialog" type="file" style="display:none" />
 
-	<script type="text/javascript" src="socketrelay.js"></script>
-	<script type="text/javascript">
+	<script src="socketrelay.js"></script>
+	<script>
 		(function () {
 			var formatBytes = function (bytes) {
 				var suffix = ["Bytes", "KB", "MB", "GB", "TB"];
