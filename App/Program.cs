@@ -97,7 +97,7 @@ namespace WebRelay
 						var service = new WebRelayService();
 						if (Environment.UserInteractive)
 						{
-							service.Start();
+							service.Start(options.ListenPrefix);
 							Console.WriteLine("Press any key to stop");
 							Console.ReadKey();
 							service.Stop();
@@ -267,12 +267,12 @@ namespace WebRelay
 			private TaskCompletionSource<bool> stopping = new TaskCompletionSource<bool>();
 			private Task task;
 
-			public void Start() => OnStart(null);
+			public void Start(string listenPrefix = null) => OnStart(new string[] { listenPrefix });
 
 			protected override void OnStart(string[] args)
 			{
 				task = server.Listen(
-					ConfigurationManager.AppSettings["listenPrefix"] ?? "http://*:80/",
+					args.Length > 0 ? args[0] : ConfigurationManager.AppSettings["listenPrefix"] ?? "http://*:80/",
 					int.Parse(ConfigurationManager.AppSettings["maxConnections"] ?? "8"),
 					stopping);
 
