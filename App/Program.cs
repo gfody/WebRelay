@@ -144,47 +144,21 @@ namespace WebRelay
 
 		private static void HandleRelay(Stream stream, Options options)
 		{
-			bool AlreadyListening()
-			{
-				int port = options.ListenPrefix.StartsWith("https") ? 443 : 80;
-				var match = new Regex(@":(\d+)").Match(options.ListenPrefix);
-				if (match.Success)
-					port = int.Parse(match.Groups[1].Captures[0].Value);
-
-				return IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners().Any(x => x.Port == port);
-			}
-			void PrintStatus(string status)
-			{
-				string line = string.Format("Status: {0}", status);
-				if (line.Length >= Console.BufferWidth)
-					line = line.Substring(0, Console.BufferWidth - 1);
-				else
-					line = line.PadRight(Console.BufferWidth - 1);
-
-				Console.CursorLeft = 0;
-				Console.Write(line);
-			}
-			string FormatBytes(long bytes)
-			{
-				int place = bytes > 0 ? Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024))) : 0;
-				return Math.Round(bytes / Math.Pow(1024, place), 1).ToString() + " KMGTPE"[place] + "B";
-			}
-
-
-			IRelay relay; string code, urlbase = options.ListenPrefix.Replace("*", HostName).Replace("+", HostName).Replace(":80", "");
+			IRelay relay; string code, urlBase = options.ListenPrefix.Replace("*", HostName).Replace("+", HostName).Replace(":80", "");
 			var done = new TaskCompletionSource<bool>();
 			Task<bool> listenTask = null;
 
 			if (!string.IsNullOrEmpty(options.RemoteHost))
 			{
 				relay = new SocketRelayClient(new Uri(options.RemoteHost), stream, out code, options.FinalFilename, options.FinalContentType);
-				urlbase = options.RemoteHost.Replace("ws", "http");
+				urlBase = options.RemoteHost.Replace("ws", "http");
 			}
-			else if (AlreadyListening()) // if something is listening on the requested port, assume it's our service and try to connect to it..
+			else if (options.ListenPrefix.AlreadyListening())
 			{
+				// if something is listening on the requested port, assume it's our service and try to connect to it..
 				try
 				{
-					relay = new SocketRelayClient(new Uri(urlbase.Replace("http", "ws")), stream, out code, options.FinalFilename, options.FinalContentType);
+					relay = new SocketRelayClient(new Uri(urlBase.Replace("http", "ws")), stream, out code, options.FinalFilename, options.FinalContentType);
 				}
 				catch (Exception e)
 				{
@@ -200,13 +174,26 @@ namespace WebRelay
 				listenTask = server.Listen(options.ListenPrefix, options.MaxConnections.Value, done);
 			}
 
+			int lastLen = Console.BufferWidth;
+			void PrintStatus(string status)
+			{
+				string line = string.Format("Status: {0}", status);
+				int lineLen = line.Length;
+				if (lineLen < lastLen)
+					line = line.PadRight(lastLen);
+
+				lastLen = lineLen;
+				Console.CursorLeft = 0;
+				Console.Write(line);
+			}
+
 			relay.OnStart += () => PrintStatus("download starting..");
 			relay.OnComplete += () => { PrintStatus("download complete"); done.TrySetResult(true); };
 			relay.OnDisconnect += () => PrintStatus("disconnected, waiting for resume..");
 			relay.OnCancel += () => { PrintStatus("canceled"); done.TrySetResult(false); };
 
 			int lastLastBps = 0, lastBps = 0; long lastDownloaded = 0;
-			double inverseTotal = stream.CanSeek ? 100 * (1.0 / stream.Length) : 1;
+			double inverseTotal = stream.CanSeek ? 1.0 / stream.Length : 1.0;
 			void ProgressUpdate(long downloaded, long? total)
 			{
 				int bps = (int)(downloaded - lastDownloaded);
@@ -214,7 +201,7 @@ namespace WebRelay
 				lastLastBps = lastBps; lastBps = bps; lastDownloaded = downloaded;
 
 				if (total.HasValue)
-					PrintStatus(string.Format("{0} ({1}%) downloaded, time remaining {2} (at {3}/sec)", FormatBytes(downloaded), (long)(downloaded * inverseTotal),
+					PrintStatus(string.Format("{0} ({1:0}%) downloaded, time remaining {2} (at {3}/sec)", FormatBytes(downloaded), downloaded * inverseTotal * 100,
 						bps > 0 ? new TimeSpan(0, 0, 0, (int)((total.Value - downloaded) / bps)).ToString() : "--:--:--", FormatBytes(bps)));
 				else
 					PrintStatus(string.Format("{0} downloaded (at {1}/sec)", FormatBytes(downloaded), FormatBytes(bps)));
@@ -222,7 +209,7 @@ namespace WebRelay
 
 			relay.OnProgress += (transferred, total) => ProgressUpdate(transferred, total);
 
-			Console.WriteLine($"Download link: {urlbase.TrimEnd('/')}/{code}");
+			Console.WriteLine($"Download link: {urlBase.TrimEnd('/')}/{code}");
 			Console.WriteLine($"Press {(Console.IsInputRedirected ? "CTRL+C" : "any key")} to cancel");
 			Console.WriteLine();
 			PrintStatus("waiting for connection..");
@@ -256,6 +243,22 @@ namespace WebRelay
 				PrintStatus("completed successfully");
 			else
 				PrintStatus("canceled");
+		}
+
+		public static string FormatBytes(this long bytes)
+		{
+			int place = bytes > 0 ? Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024))) : 0;
+			return Math.Round(bytes / Math.Pow(1024, place), 1).ToString() + " KMGTPE"[place] + "B";
+		}
+
+		public static bool AlreadyListening(this string listenPrefix)
+		{
+			int port = listenPrefix.StartsWith("https") ? 443 : 80;
+			var match = new Regex(@":(\d+)").Match(listenPrefix);
+			if (match.Success)
+				port = int.Parse(match.Groups[1].Captures[0].Value);
+
+			return IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners().Any(x => x.Port == port);
 		}
 
 
@@ -342,5 +345,6 @@ namespace WebRelay
 		}
 
 		#endregion
+
 	}
 }
