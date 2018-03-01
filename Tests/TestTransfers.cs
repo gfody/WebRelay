@@ -9,7 +9,9 @@ namespace WebRelay.Tests
 	[TestClass]
 	public class TestTransfers
 	{
-		private const string listenPrefix = "http://localhost:81/";
+		private static string listenPrefix = "http://*:81/";
+		private static string downloadUrl = listenPrefix.Replace("*", Environment.MachineName);
+		private static Uri websocketUrl = new Uri(downloadUrl.Replace("http", "ws"));
 
 		private RelayServer server;
 		private TaskCompletionSource<bool> stop;
@@ -53,17 +55,17 @@ namespace WebRelay.Tests
 			var code = server.AddRelay(new LocalRelay(stream));
 
 			using (var client = new WebClient())
-				CollectionAssert.AreEqual(data, client.DownloadData(listenPrefix + code));
+				CollectionAssert.AreEqual(data, client.DownloadData(downloadUrl + code));
 		}
 
 		private void SocketDownload(int size, bool pipe = false)
 		{
 			var data = RandomData(size);
 			var stream = pipe ? new MemoryStream(data) : new Unseekable(data);
-			var socket = new SocketRelayClient(new Uri(listenPrefix.Replace("http", "ws")), stream, out string code);
+			var socket = new SocketRelayClient(websocketUrl, stream, out string code);
 
 			using (var client = new WebClient())
-				CollectionAssert.AreEqual(data, client.DownloadData(listenPrefix + code));
+				CollectionAssert.AreEqual(data, client.DownloadData(downloadUrl + code));
 		}
 
 		[TestMethod] public void Local_Empty() => LocalDownload(0);
