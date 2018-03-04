@@ -1,0 +1,72 @@
+﻿<Application x:Class="WebRelay.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:WebRelay"
+             xmlns:tb="http://www.hardcodet.net/taskbar"
+             Startup="Application_Startup"
+             ShutdownMode="OnExplicitShutdown">
+
+    <Application.Resources>
+
+        <DataTemplate x:Key="RelayTemplate">
+            <Grid Name="itemGrid" Margin="-32,0,-48,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="48"/>
+                    <ColumnDefinition Width="400"/>
+                </Grid.ColumnDefinitions>
+                <Image Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" Width="32" Height="32" Source="{Binding FileIcon}"/>
+                <StackPanel Grid.Column="1" Margin="0,2,0,2">
+                    <TextBlock Foreground="White" FontWeight="SemiBold" FontSize="14" Text="{Binding Filename}"/>
+                    <WrapPanel Margin="0,2,0,2">
+                        <TextBlock Foreground="White" Text="{Binding URL}"/>
+                        <Button Margin="3,0,0,0" ToolTip="Copy link" Command="{Binding Copy}">
+                            <Button.Template>
+                                <ControlTemplate>
+                                    <Image Width="14" Height="14" Source="copy.png"/>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </WrapPanel>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="20"/>
+                        </Grid.ColumnDefinitions>
+                        <ProgressBar Grid.Column="0" Height="14" Minimum="0" Maximum="100" Background="{Binding Background, ElementName=itemGrid}" Value="{Binding Progress}"/>
+                        <Button Grid.Column="1" ToolTip="Cancel download" VerticalAlignment="Center" Command="{Binding Cancel}">
+                            <Button.Template>
+                                <ControlTemplate>
+                                    <Image Width="14" Height="14" Source="cancel.png"/>
+                                </ControlTemplate>
+                            </Button.Template>
+                        </Button>
+                    </Grid>
+
+                    <TextBlock Foreground="White" Text="{Binding Status}"/>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+
+        <tb:TaskbarIcon x:Key="NotifyIcon" MenuActivation="LeftOrRightClick">
+            <tb:TaskbarIcon.ContextMenu>
+                <ContextMenu ItemsSource="{Binding Relays}" ItemTemplate="{StaticResource RelayTemplate}">
+                    <ContextMenu.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Margin="-1,-1,0,-1" Background="#202020"/>
+                        </ItemsPanelTemplate>
+                    </ContextMenu.ItemsPanel>
+
+                    <ContextMenu.Style>
+                        <Style TargetType="{x:Type ContextMenu}">
+                            <Setter Property="Opacity" Value="0.85"/>
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="BorderThickness" Value="0"/>
+                        </Style>
+                    </ContextMenu.Style>
+                    
+                </ContextMenu>
+            </tb:TaskbarIcon.ContextMenu>
+        </tb:TaskbarIcon>
+    </Application.Resources>
+</Application>

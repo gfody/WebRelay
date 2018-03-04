@@ -7,12 +7,9 @@ using System.Configuration;
 using System.Configuration.Install;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Net.NetworkInformation;
 using System.Reflection;
 using System.Security.Principal;
 using System.ServiceProcess;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -192,19 +189,19 @@ namespace WebRelay
 			relay.OnDisconnect += () => PrintStatus("disconnected, waiting for resume..");
 			relay.OnCancel += () => { PrintStatus("canceled"); done.TrySetResult(false); };
 
-			int lastLastBps = 0, lastBps = 0; long lastDownloaded = 0;
+			long lastLastBps = 0, lastBps = 0, lastDownloaded = 0;
 			double inverseTotal = stream.CanSeek ? 1.0 / stream.Length : 1.0;
 			void ProgressUpdate(long downloaded, long? total)
 			{
-				int bps = (int)(downloaded - lastDownloaded);
+				var bps = downloaded - lastDownloaded;
 				bps = (bps + (lastBps > 0 ? lastBps : bps) + (lastLastBps > 0 ? lastLastBps : bps)) / 3;
 				lastLastBps = lastBps; lastBps = bps; lastDownloaded = downloaded;
 
 				if (total.HasValue)
-					PrintStatus(string.Format("{0} ({1:0}%) downloaded, time remaining {2} (at {3}/sec)", FormatBytes(downloaded), downloaded * inverseTotal * 100,
-						bps > 0 ? new TimeSpan(0, 0, 0, (int)((total.Value - downloaded) / bps)).ToString() : "--:--:--", FormatBytes(bps)));
+					PrintStatus(string.Format("{0} ({1:0}%) downloaded, time remaining {2} (at {3}/sec)", downloaded.FormatBytes(), downloaded * inverseTotal * 100,
+						bps > 0 ? new TimeSpan(0, 0, 0, (int)((total.Value - downloaded) / bps)).ToString() : "--:--:--", bps.FormatBytes()));
 				else
-					PrintStatus(string.Format("{0} downloaded (at {1}/sec)", FormatBytes(downloaded), FormatBytes(bps)));
+					PrintStatus(string.Format("{0} downloaded (at {1}/sec)", downloaded.FormatBytes(), bps.FormatBytes()));
 			}
 
 			relay.OnProgress += (transferred, total) => ProgressUpdate(transferred, total);
@@ -244,23 +241,6 @@ namespace WebRelay
 			else
 				PrintStatus("canceled");
 		}
-
-		public static string FormatBytes(this long bytes)
-		{
-			int place = bytes > 0 ? Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024))) : 0;
-			return Math.Round(bytes / Math.Pow(1024, place), 1).ToString() + " KMGTPE"[place] + "B";
-		}
-
-		public static bool AlreadyListening(this string listenPrefix)
-		{
-			int port = listenPrefix.StartsWith("https") ? 443 : 80;
-			var match = new Regex(@":(\d+)").Match(listenPrefix);
-			if (match.Success)
-				port = int.Parse(match.Groups[1].Captures[0].Value);
-
-			return IPGlobalProperties.GetIPGlobalProperties().GetActiveTcpListeners().Any(x => x.Port == port);
-		}
-
 
 		#region service
 
@@ -345,6 +325,5 @@ namespace WebRelay
 		}
 
 		#endregion
-
 	}
 }

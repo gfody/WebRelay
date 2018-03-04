@@ -30,6 +30,26 @@ Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "relay", "http://localhost/r
 	EndProjectSection
 	ProjectSection(WebsiteProperties) = preProject
 		UseIISExpress = "false"
+		TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.6"
+		ProjectReferences = "{5237a6a4-6374-4a52-8712-83152950ba9d}|SocketRelay.dll;"
+		Debug.AspNetCompiler.VirtualPath = "/relay"
+		Debug.AspNetCompiler.PhysicalPath = "www\"
+		Debug.AspNetCompiler.TargetPath = "PrecompiledWeb\relay\"
+		Debug.AspNetCompiler.Updateable = "true"
+		Debug.AspNetCompiler.ForceOverwrite = "true"
+		Debug.AspNetCompiler.FixedNames = "false"
+		Debug.AspNetCompiler.Debug = "True"
+		Release.AspNetCompiler.VirtualPath = "/relay"
+		Release.AspNetCompiler.PhysicalPath = "www\"
+		Release.AspNetCompiler.TargetPath = "PrecompiledWeb\relay\"
+		Release.AspNetCompiler.Updateable = "true"
+		Release.AspNetCompiler.ForceOverwrite = "true"
+		Release.AspNetCompiler.FixedNames = "false"
+		Release.AspNetCompiler.Debug = "False"
+		SlnRelativePath = "www\"
+	EndProjectSection
+	ProjectSection(WebsiteProperties) = preProject
+		UseIISExpress = "false"
 		TargetFrameworkMoniker = ".NETFramework,Version%3Dv4.7.1"
 		ProjectReferences = "{5237a6a4-6374-4a52-8712-83152950ba9d}|SocketRelay.dll;"
 		Debug.AspNetCompiler.VirtualPath = "/relay"
@@ -71,6 +91,8 @@ Project("{E24C65DC-7377-472B-9ABA-BC803B73C61A}") = "relay", "http://localhost/r
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{7BF91F10-4655-4B6F-9585-051F09830F65}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "WebRelayTray", "Tray\WebRelayTray.csproj", "{B61C0501-DBB6-4A9D-804F-8AE53BD75117}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -93,6 +115,10 @@ Global
 		{7BF91F10-4655-4B6F-9585-051F09830F65}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7BF91F10-4655-4B6F-9585-051F09830F65}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{7BF91F10-4655-4B6F-9585-051F09830F65}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B61C0501-DBB6-4A9D-804F-8AE53BD75117}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B61C0501-DBB6-4A9D-804F-8AE53BD75117}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B61C0501-DBB6-4A9D-804F-8AE53BD75117}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B61C0501-DBB6-4A9D-804F-8AE53BD75117}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
