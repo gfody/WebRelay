@@ -164,6 +164,7 @@ namespace WebRelay
 				Background = (Brush)bc.ConvertFromString("#202020"),
 				WindowStartupLocation = WindowStartupLocation.Manual,
 				Topmost = true,
+				ShowActivated = false,
 			};
 			popup.Show();
 			popup.Left = desktop.Right - relayStatus.ActualWidth - 2;

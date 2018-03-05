@@ -129,4 +129,7 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>$(SolutionDir)\packages\LibZ.Tool.1.2.0.0\tools\libz.exe inject-dll --assembly $(TargetFileName) --include *.dll --move</PostBuildEvent>
+  </PropertyGroup>
 </Project>
