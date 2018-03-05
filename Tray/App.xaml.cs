@@ -5,12 +5,9 @@ using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
-using System.IO.MemoryMappedFiles;
 using System.Linq;
-using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using System.Windows;
-using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using Brush = System.Windows.Media.Brush;
@@ -28,8 +25,6 @@ namespace WebRelay
 		private Task<bool> listen;
 		private string hostName, remoteHost, listenPrefix, urlBase;
 		private bool remote;
-		private HwndSource messageWindow;
-		private MemoryMappedFile global;
 
 		private void Application_Startup(object sender, StartupEventArgs e)
 		{
@@ -39,13 +34,11 @@ namespace WebRelay
 				return;
 			}
 
-			if (!FirstInstance(out IntPtr handle))
+			if (OneInstance.First())
+				OneInstance.OnMessage += AddRelay;
+			else
 			{
-				var filename = new FileInfo(e.Args[0]).FullName;
-				var copyData = new Win32.COPYDATA() { cbData = filename.Length + 1, lpData = Marshal.StringToHGlobalAnsi(filename) };
-				var ptrCopyData = Marshal.AllocCoTaskMem(Marshal.SizeOf(copyData));
-				Marshal.StructureToPtr(copyData, ptrCopyData, false);
-				Win32.SendMessage(handle, Win32.WM_COPYDATA, IntPtr.Zero, ptrCopyData);
+				OneInstance.SendMessage(new FileInfo(e.Args[0]).FullName);
 				Shutdown();
 				return;
 			}
@@ -80,44 +73,6 @@ namespace WebRelay
 			notifyIcon.Icon = ProgressIcon(0);
 
 			AddRelay(e.Args[0]);
-		}
-
-		public bool FirstInstance(out IntPtr handle)
-		{
-			try
-			{
-				global = MemoryMappedFile.OpenExisting(nameof(WebRelay));
-				using (var r = global.CreateViewAccessor())
-				{
-					r.Read(0, out long value);
-					handle = new IntPtr(value);
-					return false;
-				}
-			}
-			catch (FileNotFoundException)
-			{
-				messageWindow = new HwndSource(new HwndSourceParameters());
-				handle = messageWindow.Handle;
-				Win32.ChangeWindowMessageFilterEx(handle, Win32.WM_COPYDATA, Win32.ChangeWindowMessageFilterExAction.Allow, IntPtr.Zero);
-
-				global = MemoryMappedFile.CreateNew(nameof(WebRelay), 8);
-				using (var w = global.CreateViewAccessor())
-					w.Write(0, (long)handle);
-
-				messageWindow.AddHook(WndProc);
-				return true;
-			}
-		}
-
-		private IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-		{
-			if (msg == Win32.WM_COPYDATA)
-			{
-				var data = Marshal.PtrToStructure<Win32.COPYDATA>(lParam);
-				AddRelay(Marshal.PtrToStringAnsi(data.lpData));
-				handled = true;
-			}
-			return IntPtr.Zero;
 		}
 
 		private void AddRelay(string filename)
@@ -184,6 +139,7 @@ namespace WebRelay
 					Shutdown();
 			};
 
+			Clipboard.SetDataObject(urlBase + code, true);
 			relayStatus.Relays.Add(status);
 			ShowRelays();
 		}
@@ -245,32 +201,6 @@ namespace WebRelay
 					return new Icon(ms);
 				}
 			}
-		}
-
-		private static class Win32
-		{
-			public static uint WM_COPYDATA = 0x004A;
-
-			[StructLayout(LayoutKind.Sequential)]
-			public struct COPYDATA
-			{
-				public IntPtr dwData;
-				public int cbData;
-				public IntPtr lpData;
-			}
-
-			public enum ChangeWindowMessageFilterExAction : uint
-			{
-				Reset = 0,
-				Allow = 1,
-				DisAllow = 2
-			}
-
-			[DllImport("user32")]
-			public static extern IntPtr SendMessage(IntPtr hWnd, UInt32 Msg, IntPtr wParam, IntPtr lParam);
-
-			[DllImport("user32")]
-			public static extern bool ChangeWindowMessageFilterEx(IntPtr hWnd, uint msg, ChangeWindowMessageFilterExAction action, IntPtr changeInfo);
 		}
 	}
 }
