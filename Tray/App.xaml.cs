@@ -75,7 +75,7 @@ namespace WebRelay
 			AddRelay(e.Args[0]);
 		}
 
-		private void AddRelay(string filename)
+		private async void AddRelay(string filename)
 		{
 			IRelay relay;
 			var file = new FileInfo(filename);
@@ -83,7 +83,8 @@ namespace WebRelay
 			string code;
 			if (remote)
 			{
-				relay = new SocketRelayClient(new Uri(remoteHost), stream, out code, file.Name);
+				relay = new SocketRelayClient();
+				code = await (relay as SocketRelayClient).AddRelay(new Uri(remoteHost), stream, file.Name);
 			}
 			else
 			{
@@ -111,9 +112,9 @@ namespace WebRelay
 			relay.OnComplete += () =>
 			{
 				stream.Close();
-				notifyIcon.ShowBalloonTip(file.Name, "Download complete", BalloonIcon.Info);
 				Current.Dispatcher.BeginInvoke((Action)delegate
 				{
+					notifyIcon.ShowBalloonTip(file.Name, "Download complete", BalloonIcon.Info);
 					relayStatus.Relays.Remove(status);
 					if (relayStatus.Relays.Count == 0)
 						Shutdown();
@@ -123,13 +124,13 @@ namespace WebRelay
 			relay.OnStart += () =>
 			{
 				status.Status = "download starting..";
-				ShowRelays();
+				Current.Dispatcher.BeginInvoke((Action)delegate { ShowRelays(); });
 			};
 
 			relay.OnDisconnect += () =>
 			{
 				status.Status = "disconnected, waiting to resume..";
-				ShowRelays();
+				Current.Dispatcher.BeginInvoke((Action)delegate { ShowRelays(); });
 			};
 
 			relay.OnCancel += () =>

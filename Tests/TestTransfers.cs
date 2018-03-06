@@ -62,7 +62,8 @@ namespace WebRelay.Tests
 		{
 			var data = RandomData(size);
 			var stream = pipe ? new MemoryStream(data) : new Unseekable(data);
-			var socket = new SocketRelayClient(websocketUrl, stream, out string code);
+			var socket = new SocketRelayClient();
+			var code = socket.AddRelay(websocketUrl, stream).Result;
 
 			using (var client = new WebClient())
 				CollectionAssert.AreEqual(data, client.DownloadData(downloadUrl + code));

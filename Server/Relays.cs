@@ -355,18 +355,19 @@ namespace WebRelay
 		private Stream stream;
 		private long bytesUploaded;
 
-		public SocketRelayClient(Uri server, Stream stream, out string code, string filename = null, string mimetype = null)
+		public async Task<string> AddRelay(Uri server, Stream stream, string filename = null, string mimetype = null)
 		{
 			this.stream = stream;
 			var timeout = new CancellationTokenSource(new TimeSpan(0, 0, 3));
 
-			socket.ConnectAsync(server, timeout.Token).Wait();
-			socket.SendString(filename ?? "", timeout.Token).Wait();
-			socket.SendString(stream.CanSeek ? stream.Length.ToString() : "", timeout.Token).Wait();
-			socket.SendString(mimetype ?? "", timeout.Token).Wait();
-			code = socket.ReceiveString(timeout.Token).Result.Replace("code=", "");
-
+			await socket.ConnectAsync(server, timeout.Token);
+			await socket.SendString(filename ?? "", timeout.Token);
+			await socket.SendString(stream.CanSeek ? stream.Length.ToString() : "", timeout.Token);
+			await socket.SendString(mimetype ?? "", timeout.Token);
+			var code = (await socket.ReceiveString(timeout.Token)).Replace("code=", "");
 			listenTask = Task.Factory.StartNew(Run, cancel.Token, TaskCreationOptions.LongRunning, TaskScheduler.Default);
+
+			return code;
 		}
 
 		public void Cancel()

@@ -147,7 +147,8 @@ namespace WebRelay
 
 			if (!string.IsNullOrEmpty(options.RemoteHost))
 			{
-				relay = new SocketRelayClient(new Uri(options.RemoteHost), stream, out code, options.FinalFilename, options.FinalContentType);
+				relay = new SocketRelayClient();
+				code = (relay as SocketRelayClient).AddRelay(new Uri(options.RemoteHost), stream, options.FinalFilename, options.FinalContentType).Result;
 				urlBase = options.RemoteHost.Replace("ws", "http");
 			}
 			else if (options.ListenPrefix.AlreadyListening())
@@ -155,7 +156,8 @@ namespace WebRelay
 				// if something is listening on the requested port, assume it's our service and try to connect to it..
 				try
 				{
-					relay = new SocketRelayClient(new Uri(urlBase.Replace("http", "ws")), stream, out code, options.FinalFilename, options.FinalContentType);
+					relay = new SocketRelayClient();
+					code = (relay as SocketRelayClient).AddRelay(new Uri(urlBase.Replace("http", "ws")), stream, options.FinalFilename, options.FinalContentType).Result;
 				}
 				catch (Exception e)
 				{
