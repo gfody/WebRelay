@@ -24,11 +24,12 @@ namespace WebRelay
 		private TaskCompletionSource<bool> stop;
 		private Task<bool> listen;
 		private string hostName, remoteHost, listenPrefix, urlBase;
-		private bool remote;
+		private bool remote, stayOpen;
 
 		private void Application_Startup(object sender, StartupEventArgs e)
 		{
-			if (e.Args.Length != 1)
+			stayOpen = bool.Parse(ConfigurationManager.AppSettings["stayOpen"] ?? "true");
+			if (e.Args.Length == 0 && !stayOpen)
 			{
 				Shutdown();
 				return;
@@ -36,7 +37,7 @@ namespace WebRelay
 
 			if (OneInstance.First())
 				OneInstance.OnMessage += AddRelay;
-			else
+			else if (e.Args.Length > 0)
 			{
 				OneInstance.SendMessage(new FileInfo(e.Args[0]).FullName);
 				Shutdown();
@@ -61,10 +62,12 @@ namespace WebRelay
 			else
 			{
 				remote = false;
-				server = new RelayServer();
+				server = new RelayServer() { EnableBuiltinWebclient = bool.Parse(ConfigurationManager.AppSettings["enableWebClient"] ?? "true") };
 				stop = new TaskCompletionSource<bool>();
 				listen = server.Listen(listenPrefix, int.Parse(ConfigurationManager.AppSettings["maxConnections"] ?? "8"), stop);
 			}
+
+			urlBase += urlBase.EndsWith("/") ? "" : "/";
 
 			relayStatus = new RelayStatus();
 			notifyIcon = (TaskbarIcon)FindResource("NotifyIcon");
@@ -72,7 +75,7 @@ namespace WebRelay
 			notifyIcon.DataContext = relayStatus;
 			notifyIcon.Icon = ProgressIcon(0);
 
-			AddRelay(e.Args[0]);
+			if (e.Args.Length > 0) AddRelay(e.Args[0]);
 		}
 
 		private async void AddRelay(string filename)
@@ -92,52 +95,39 @@ namespace WebRelay
 				code = server.AddRelay(relay);
 			}
 
-			var status = new RelayStatus.Item(file.FullName, urlBase + code, relay, relayStatus.Relays);
+			var status = new RelayStatus.Item(file, urlBase + code, relay, relayStatus.Relays);
 
-			long lastLastBps = 0, lastBps = 0, lastDownloaded = 0;
-			double inverseTotal = 1.0 / file.Length;
+			relay.OnStart += () => Current.Dispatcher.BeginInvoke((Action)ShowRelays);
+			relay.OnDisconnect += () => Current.Dispatcher.BeginInvoke((Action)ShowRelays);
+
 			relay.OnProgress += (downloaded, total) =>
 			{
-				var bps = downloaded - lastDownloaded;
-				bps = (bps + (lastBps > 0 ? lastBps : bps) + (lastLastBps > 0 ? lastLastBps : bps)) / 3;
-				lastLastBps = lastBps; lastBps = bps; lastDownloaded = downloaded;
-				double percentage = downloaded * inverseTotal;
-				status.Progress = percentage * 100;
-				status.Status = string.Format("{0} ({1:0}%) downloaded, time remaining {2} (at {3}/sec)", downloaded.FormatBytes(), status.Progress,
-						bps > 0 ? new TimeSpan(0, 0, 0, (int)((total.Value - downloaded) / bps)).ToString() : "--:--:--", bps.FormatBytes());
-
-				notifyIcon.Icon = ProgressIcon(0.01 * relayStatus.Relays.Average(x => x.Progress));
+				double sumtotal = relayStatus.Relays.Sum(x => x.TotalSize);
+				double sumdownloaded = relayStatus.Relays.Sum(x => x.Downloaded);
+				notifyIcon.Icon = ProgressIcon(sumtotal > 0 ? sumdownloaded / sumtotal : 0);
 			};
 
 			relay.OnComplete += () =>
 			{
 				stream.Close();
-				Current.Dispatcher.BeginInvoke((Action)delegate
+				Current.Dispatcher.BeginInvoke((Action)(() =>
 				{
 					notifyIcon.ShowBalloonTip(file.Name, "Download complete", BalloonIcon.Info);
 					relayStatus.Relays.Remove(status);
-					if (relayStatus.Relays.Count == 0)
+					if (relayStatus.Relays.Count == 1 && !stayOpen)
 						Shutdown();
-				});
-			};
-
-			relay.OnStart += () =>
-			{
-				status.Status = "download starting..";
-				Current.Dispatcher.BeginInvoke((Action)delegate { ShowRelays(); });
-			};
-
-			relay.OnDisconnect += () =>
-			{
-				status.Status = "disconnected, waiting to resume..";
-				Current.Dispatcher.BeginInvoke((Action)delegate { ShowRelays(); });
+				}));
 			};
 
 			relay.OnCancel += () =>
 			{
 				stream.Close();
-				if (relayStatus.Relays.Count == 0)
-					Shutdown();
+				Current.Dispatcher.BeginInvoke((Action)(() =>
+				{
+					relayStatus.Relays.Remove(status);
+					if (relayStatus.Relays.Count == 1 && !stayOpen)
+						Shutdown();
+				}));
 			};
 
 			Clipboard.SetDataObject(urlBase + code, true);
@@ -159,7 +149,7 @@ namespace WebRelay
 				WindowStyle = WindowStyle.None,
 				ResizeMode = ResizeMode.NoResize,
 				AllowsTransparency = true,
-				Opacity = 0.85,
+				Opacity = 0.0,
 				BorderThickness = new Thickness(1),
 				BorderBrush = (Brush)bc.ConvertFromString("#252525"),
 				Background = (Brush)bc.ConvertFromString("#202020"),
@@ -170,14 +160,22 @@ namespace WebRelay
 			popup.Show();
 			popup.Left = desktop.Right - relayStatus.ActualWidth - 2;
 			popup.Top = desktop.Bottom - relayStatus.ActualHeight - 2;
-			DoubleAnimation da = new DoubleAnimation() { From = 0.85, To = 0, BeginTime = TimeSpan.FromSeconds(2.5), Duration = new Duration(TimeSpan.FromSeconds(0.5)) };
-			da.Completed += (o, a) =>
+
+			var ani = new DoubleAnimationUsingKeyFrames() { KeyFrames = new DoubleKeyFrameCollection()
+			{
+				new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0))),
+				new LinearDoubleKeyFrame(0.85, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.25))),
+				new LinearDoubleKeyFrame(0.85, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(2.5))),
+				new LinearDoubleKeyFrame(0, KeyTime.FromTimeSpan(TimeSpan.FromSeconds(3)))
+			}};
+
+			ani.Completed += (o, a) =>
 			{
 				popup.Close();
 				notifyIcon.TrayToolTip = relayStatus;
 				notifyIcon.DataContext = relayStatus;
 			};
-			popup.BeginAnimation(UIElement.OpacityProperty, da);
+			popup.BeginAnimation(UIElement.OpacityProperty, ani);
 		}
 
 		private static Icon ProgressIcon(double percentage)

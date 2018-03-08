@@ -15,6 +15,6 @@
             <ColumnDefinition Width="*"/>
             <ColumnDefinition Width="48"/>
         </Grid.ColumnDefinitions>
-        <ItemsControl Grid.Column="1" ItemsSource="{Binding Relays}" ItemTemplate="{StaticResource RelayTemplate}" Margin="0,0,0,4"/>
+        <ItemsControl Grid.Column="1" ItemsSource="{Binding Relays}" ItemTemplateSelector="{StaticResource RelayTemplateSelector}" Margin="0,0,0,4"/>
     </Grid>
 </UserControl>

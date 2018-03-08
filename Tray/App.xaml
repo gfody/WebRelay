@@ -8,16 +8,19 @@
 
     <Application.Resources>
 
+        <local:RelayTemplateSelector x:Key="RelayTemplateSelector" />
+        <BooleanToVisibilityConverter x:Key="BtoV" />
+
         <DataTemplate x:Key="RelayTemplate">
             <Grid Name="itemGrid" Margin="-32,0,-48,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="48"/>
                     <ColumnDefinition Width="400"/>
                 </Grid.ColumnDefinitions>
-                <Image Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" Width="32" Height="32" Source="{Binding FileIcon}"/>
+                <Image Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" Width="32" Height="32" Source="{Binding FileIcon, TargetNullValue=pug.ico}"/>
                 <StackPanel Grid.Column="1" Margin="0,2,0,2">
                     <TextBlock Foreground="White" FontWeight="SemiBold" FontSize="14" Text="{Binding Filename}"/>
-                    <WrapPanel Margin="0,2,0,2">
+                    <DockPanel Margin="0,2,0,2">
                         <TextBlock Foreground="White" Text="{Binding URL}"/>
                         <Button Margin="3,0,0,0" ToolTip="Copy link" Command="{Binding Copy}">
                             <Button.Template>
@@ -26,7 +29,8 @@
                                 </ControlTemplate>
                             </Button.Template>
                         </Button>
-                    </WrapPanel>
+                        <TextBlock Margin="0,0,20,0" Foreground="White" Text="{Binding Remaining, StringFormat=hh\\:mm\\:ss}" HorizontalAlignment="Right"/>
+                    </DockPanel>
 
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -43,20 +47,31 @@
                         </Button>
                     </Grid>
 
-                    <TextBlock Foreground="White" Text="{Binding Status}"/>
+                    <DockPanel>
+                        <TextBlock Foreground="White" Text="{Binding Status}"/>
+                        <TextBlock Margin="0,0,20,0" Foreground="White" Text="{Binding Bps}" HorizontalAlignment="Right"/>
+                    </DockPanel>
                 </StackPanel>
             </Grid>
         </DataTemplate>
 
+        <DataTemplate x:Key="NoItemsTemplate">
+            <TextBlock Foreground="White" Visibility="{Binding Show, Converter={StaticResource BtoV}}">Nothing to see here</TextBlock>
+        </DataTemplate>
+
         <tb:TaskbarIcon x:Key="NotifyIcon" MenuActivation="LeftOrRightClick">
             <tb:TaskbarIcon.ContextMenu>
-                <ContextMenu ItemsSource="{Binding Relays}" ItemTemplate="{StaticResource RelayTemplate}">
+                <ContextMenu ItemsSource="{Binding Relays}" ItemTemplateSelector="{StaticResource RelayTemplateSelector}">
+                    <ContextMenu.ItemContainerStyle>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Visibility" Value="{Binding Show, Converter={StaticResource BtoV}}"/>
+                        </Style>
+                    </ContextMenu.ItemContainerStyle>
                     <ContextMenu.ItemsPanel>
                         <ItemsPanelTemplate>
                             <StackPanel Margin="-1,-1,0,-1" Background="#202020"/>
                         </ItemsPanelTemplate>
                     </ContextMenu.ItemsPanel>
-
                     <ContextMenu.Style>
                         <Style TargetType="{x:Type ContextMenu}">
                             <Setter Property="Opacity" Value="0.85"/>
@@ -64,7 +79,6 @@
                             <Setter Property="BorderThickness" Value="0"/>
                         </Style>
                     </ContextMenu.Style>
-                    
                 </ContextMenu>
             </tb:TaskbarIcon.ContextMenu>
         </tb:TaskbarIcon>
