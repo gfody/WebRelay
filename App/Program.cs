@@ -191,19 +191,21 @@ namespace WebRelay
 			relay.OnDisconnect += () => PrintStatus("disconnected, waiting for resume..");
 			relay.OnCancel += () => { PrintStatus("canceled"); done.TrySetResult(false); };
 
-			long lastLastBps = 0, lastBps = 0, lastDownloaded = 0;
-			double inverseTotal = stream.CanSeek ? 1.0 / stream.Length : 1.0;
+			long lastDownloaded = 0;
+			double lastLastBps = 0, lastBps = 0, inverseTotal = (stream.CanSeek && stream.Length > 0) ? 100.0 / stream.Length : 1.0;
 			void ProgressUpdate(long downloaded, long? total)
 			{
-				var bps = downloaded - lastDownloaded;
-				bps = (bps + (lastBps > 0 ? lastBps : bps) + (lastLastBps > 0 ? lastLastBps : bps)) / 3;
+				double bps = downloaded - lastDownloaded;
+				bps = (bps + (lastBps > 0 ? lastBps : bps) + (lastLastBps > 0 ? lastLastBps : bps)) / 3.0;
 				lastLastBps = lastBps; lastBps = bps; lastDownloaded = downloaded;
 
 				if (total.HasValue)
-					PrintStatus(string.Format("{0} ({1:0}%) downloaded, time remaining {2} (at {3}/sec)", downloaded.FormatBytes(), downloaded * inverseTotal * 100,
-						bps > 0 ? new TimeSpan(0, 0, 0, (int)((total.Value - downloaded) / bps)).ToString() : "--:--:--", bps.FormatBytes()));
+				{
+					var remaining = bps > 0 ? TimeSpan.FromSeconds((total.Value - downloaded) / bps).ToString("hh\\:mm\\:ss") : "--:--:--";
+					PrintStatus($"{downloaded.FormatBytes()} ({downloaded * inverseTotal:0}%) downloaded, time remaining {remaining} (at {((long)bps).FormatBytes()}/sec)");
+				}
 				else
-					PrintStatus(string.Format("{0} downloaded (at {1}/sec)", downloaded.FormatBytes(), bps.FormatBytes()));
+					PrintStatus($"{downloaded.FormatBytes()} downloaded (at {((long)bps).FormatBytes()}/sec)");
 			}
 
 			relay.OnProgress += (transferred, total) => ProgressUpdate(transferred, total);
@@ -248,14 +250,16 @@ namespace WebRelay
 
 		public class WebRelayService : ServiceBase
 		{
-			private RelayServer server = new RelayServer();
-			private TaskCompletionSource<bool> stopping = new TaskCompletionSource<bool>();
+			private RelayServer server;
+			private TaskCompletionSource<bool> stopping;
 			private Task task;
 
 			public void Start(string listenPrefix = null) => OnStart(new string[] { listenPrefix });
 
 			protected override void OnStart(string[] args)
 			{
+				server = new RelayServer() { EnableBuiltinWebclient = bool.Parse(ConfigurationManager.AppSettings["enableWebClient"] ?? "true") };
+				stopping = new TaskCompletionSource<bool>();
 				task = server.Listen(
 					args.Length > 0 ? args[0] : ConfigurationManager.AppSettings["listenPrefix"] ?? "http://*:80/",
 					int.Parse(ConfigurationManager.AppSettings["maxConnections"] ?? "8"),
