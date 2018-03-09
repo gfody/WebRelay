@@ -28,54 +28,69 @@ namespace WebRelay
 
 		private void Application_Startup(object sender, StartupEventArgs e)
 		{
-			stayOpen = bool.Parse(ConfigurationManager.AppSettings["stayOpen"] ?? "true");
-			if (e.Args.Length == 0 && !stayOpen)
+			try
 			{
+				stayOpen = bool.Parse(ConfigurationManager.AppSettings["stayOpen"] ?? "true");
+				if (e.Args.Length == 0 && !stayOpen)
+				{
+					Shutdown();
+					return;
+				}
+
+				if (OneInstance.First())
+					OneInstance.OnMessage += AddRelay;
+
+				else if (e.Args.Length > 0)
+				{
+					OneInstance.SendMessage(new FileInfo(e.Args[0]).FullName);
+					Shutdown();
+					return;
+				}
+
+				hostName = ConfigurationManager.AppSettings["hostname"] ?? Environment.MachineName;
+				remoteHost = ConfigurationManager.AppSettings["remoteHost"];
+				listenPrefix = ConfigurationManager.AppSettings["listenPrefix"] ?? "http://*:80/";
+				urlBase = listenPrefix.Replace("*", hostName).Replace("+", hostName).Replace(":80", "");
+
+				if (!string.IsNullOrEmpty(remoteHost))
+				{
+					remote = true;
+					urlBase = remoteHost.Replace("ws", "http");
+				}
+				else if (listenPrefix.AlreadyListening())
+				{
+					remote = true;
+					remoteHost = urlBase.Replace("http", "ws");
+				}
+				else
+				{
+					remote = false;
+					server = new RelayServer() { EnableBuiltinWebclient = bool.Parse(ConfigurationManager.AppSettings["enableWebClient"] ?? "true") };
+					stop = new TaskCompletionSource<bool>();
+					listen = server.Listen(listenPrefix, int.Parse(ConfigurationManager.AppSettings["maxConnections"] ?? "8"), stop);
+					if (listen.IsFaulted) throw listen.Exception.InnerException;
+				}
+
+				urlBase += urlBase.EndsWith("/") ? "" : "/";
+
+				relayStatus = new RelayStatus();
+				notifyIcon = (TaskbarIcon)FindResource("NotifyIcon");
+				notifyIcon.TrayToolTip = relayStatus;
+				notifyIcon.DataContext = relayStatus;
+				notifyIcon.Icon = ProgressIcon(0);
+
+				if (e.Args.Length > 0) AddRelay(e.Args[0]);
+			}
+			catch (System.Net.HttpListenerException ex) when ((uint)ex.HResult == 0x80004005) // access denied
+			{
+				MessageBox.Show($"Listen requires admin or an explicit urlacl for your listen prefix.. E.g.: netsh http add urlacl url={listenPrefix} user=everyone", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 				Shutdown();
-				return;
 			}
-
-			if (OneInstance.First())
-				OneInstance.OnMessage += AddRelay;
-			else if (e.Args.Length > 0)
+			catch (Exception ex)
 			{
-				OneInstance.SendMessage(new FileInfo(e.Args[0]).FullName);
+				MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
 				Shutdown();
-				return;
 			}
-
-			hostName = ConfigurationManager.AppSettings["hostname"] ?? Environment.MachineName;
-			remoteHost = ConfigurationManager.AppSettings["remoteHost"];
-			listenPrefix = ConfigurationManager.AppSettings["listenPrefix"] ?? "http://*:80/";
-			urlBase = listenPrefix.Replace("*", hostName).Replace("+", hostName).Replace(":80", "");
-
-			if (!string.IsNullOrEmpty(remoteHost))
-			{
-				remote = true;
-				urlBase = remoteHost.Replace("ws", "http");
-			}
-			else if (listenPrefix.AlreadyListening())
-			{
-				remote = true;
-				remoteHost = urlBase.Replace("http", "ws");
-			}
-			else
-			{
-				remote = false;
-				server = new RelayServer() { EnableBuiltinWebclient = bool.Parse(ConfigurationManager.AppSettings["enableWebClient"] ?? "true") };
-				stop = new TaskCompletionSource<bool>();
-				listen = server.Listen(listenPrefix, int.Parse(ConfigurationManager.AppSettings["maxConnections"] ?? "8"), stop);
-			}
-
-			urlBase += urlBase.EndsWith("/") ? "" : "/";
-
-			relayStatus = new RelayStatus();
-			notifyIcon = (TaskbarIcon)FindResource("NotifyIcon");
-			notifyIcon.TrayToolTip = relayStatus;
-			notifyIcon.DataContext = relayStatus;
-			notifyIcon.Icon = ProgressIcon(0);
-
-			if (e.Args.Length > 0) AddRelay(e.Args[0]);
 		}
 
 		private async void AddRelay(string filename)

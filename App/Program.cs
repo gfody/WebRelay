@@ -171,6 +171,7 @@ namespace WebRelay
 				var server = new RelayServer() { EnableBuiltinWebclient = false };
 				code = server.AddRelay(relay);
 				listenTask = server.Listen(options.ListenPrefix, options.MaxConnections.Value, done);
+				if (listenTask.IsFaulted) throw listenTask.Exception.InnerException;
 			}
 
 			int lastLen = Console.BufferWidth;
