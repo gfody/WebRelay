@@ -130,6 +130,9 @@
       <Name>WebRelayServer</Name>
     </ProjectReference>
   </ItemGroup>
+  <ItemGroup>
+    <Resource Include="earth.png" />
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
     <PostBuildEvent>if $(ConfigurationName) == Release $(SolutionDir)\packages\LibZ.Tool.1.2.0.0\tools\libz.exe inject-dll --assembly $(TargetFileName) --include *.dll --move</PostBuildEvent>

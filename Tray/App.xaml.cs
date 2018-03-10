@@ -74,6 +74,7 @@ namespace WebRelay
 					stop = new TaskCompletionSource<bool>();
 					listen = server.Listen(listenPrefix, maxConnections, stop);
 					if (listen.IsFaulted) throw listen.Exception.InnerException;
+					server.OnSocketRelay += (file, size, code, relay) => AddRelayStatus(file, size, urlBase + code, relay);
 				}
 
 				urlBase += urlBase.EndsWith("/") ? "" : "/";
@@ -122,56 +123,47 @@ namespace WebRelay
 				code = server.AddRelay(relay);
 			}
 
-			var status = new RelayStatus.Item(file, urlBase + code, relay, relayStatus.Relays);
+			relay.OnComplete += () => stream.Close();
+			relay.OnCancel += () => stream.Close();
+			AddRelayStatus(file.FullName, file.Length, urlBase + code, relay);
+			Clipboard.SetDataObject(urlBase + code, true);
+		}
 
+		private void AddRelayStatus(string filename, long? filesize, string url, IRelay relay)
+		{
+			var status = new RelayStatus.Item(filename, filesize, url, relay, relayStatus.Relays);
 			relay.OnStart += () => Current.Dispatcher.BeginInvoke((Action)ShowRelays);
 			relay.OnDisconnect += () => Current.Dispatcher.BeginInvoke((Action)ShowRelays);
 
-			relay.OnProgress += (downloaded, total) =>
+			void UpdateProgressIcon()
 			{
-				double sumtotal = relayStatus.Relays.Sum(x => x.TotalSize);
-				notifyIcon.Icon = ProgressIcon(sumtotal > 0 ? relayStatus.Relays.Sum(x => x.Downloaded) / sumtotal : 0);
-			};
+				double totalbytes = relayStatus.Relays.Sum(x => x.TotalSize ?? 0);
+				double downloaded = relayStatus.Relays.Sum(x => x.TotalSize.HasValue ? x.Downloaded : 0);
+				notifyIcon.Icon = ProgressIcon(totalbytes > 0 ? downloaded / totalbytes : 0);
+			}
 
-			relay.OnComplete += () =>
+			void RemoveAndShutdown()
 			{
-				stream.Close();
-				Current.Dispatcher.BeginInvoke((Action)(() =>
+				relayStatus.Relays.Remove(status);
+				if (relayStatus.Relays.Count == 1)
 				{
-					notifyIcon.ShowBalloonTip(file.Name, "Download complete", BalloonIcon.Info);
-					relayStatus.Relays.Remove(status);
-					if (relayStatus.Relays.Count == 1)
-					{
-						if (stayOpen)
-							notifyIcon.Icon = appIcon;
-						else
-							Shutdown();
-					}
-				}));
-			};
+					if (stayOpen)
+						notifyIcon.Icon = appIcon;
+					else
+						Shutdown();
+				}
+			}
 
-			relay.OnCancel += () =>
+			relay.OnProgress += (downloaded, total) => UpdateProgressIcon();
+			relay.OnCancel += () => Current.Dispatcher.BeginInvoke((Action)(() => RemoveAndShutdown()));
+			relay.OnComplete += () => Current.Dispatcher.BeginInvoke((Action)(() =>
 			{
-				stream.Close();
-				Current.Dispatcher.BeginInvoke((Action)(() =>
-				{
-					relayStatus.Relays.Remove(status);
-					if (relayStatus.Relays.Count == 1)
-					{
-						if (stayOpen)
-							notifyIcon.Icon = appIcon;
-						else
-							Shutdown();
-					}
-				}));
-			};
+				notifyIcon.ShowBalloonTip(filename, "Download complete", BalloonIcon.Info);
+				RemoveAndShutdown();
+			}));
 
-			Clipboard.SetDataObject(urlBase + code, true);
 			relayStatus.Relays.Add(status);
-
-			double progressTotal = relayStatus.Relays.Sum(x => x.TotalSize);
-			notifyIcon.Icon = ProgressIcon(progressTotal > 0 ? relayStatus.Relays.Sum(x => x.Downloaded) / progressTotal : 0);
-
+			UpdateProgressIcon();
 			ShowRelays();
 		}
 

@@ -185,9 +185,9 @@ namespace WebRelay
 				if (t is Task<WebSocketReceiveResult>)
 				{
 					socketClosed = true;
+					if (filesize.HasValue || progress.Downloaded == 0) OnCancel?.Invoke();
 					closeStatus = ((Task<WebSocketReceiveResult>)t).Result.CloseStatusDescription;
 					await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, closeStatus, cancel.Token);
-					if (filesize.HasValue) OnCancel?.Invoke();
 					return;
 				}
 				// downloader connected..
@@ -217,20 +217,20 @@ namespace WebRelay
 						{
 							// tell client we're done and wait for the close, if we just hangup the message doesn't always make it..
 							case DownloadResult.Completed:
+								OnComplete?.Invoke();
 								await socket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes("completed")), WebSocketMessageType.Text, true, cancel.Token);
 								await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, (await pendingReceive).CloseStatusDescription, cancel.Token);
-								OnComplete?.Invoke();
 								return;
 
 							// if download is interrupted inform uploader but keep listening incase downloader recovers..
 							case DownloadResult.Interrupted:
-								await socket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes("disconnected")), WebSocketMessageType.Text, true, cancel.Token);
 								OnDisconnect?.Invoke();
+								await socket.SendAsync(new ArraySegment<byte>(Encoding.UTF8.GetBytes("disconnected")), WebSocketMessageType.Text, true, cancel.Token);
 								break;
 
 							case DownloadResult.Canceled:
-								await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, closeStatus, cancel.Token);
 								OnCancel?.Invoke();
+								await socket.CloseOutputAsync(WebSocketCloseStatus.NormalClosure, closeStatus, cancel.Token);
 								return;
 						}
 					}

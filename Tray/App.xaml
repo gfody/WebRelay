@@ -10,6 +10,7 @@
 
         <local:RelayTemplateSelector x:Key="RelayTemplateSelector" />
         <BooleanToVisibilityConverter x:Key="BtoV" />
+        <ImageSource x:Key="earth">earth.png</ImageSource>
 
         <DataTemplate x:Key="RelayTemplate">
             <Grid Name="itemGrid" Margin="-32,0,-48,0">
@@ -17,7 +18,7 @@
                     <ColumnDefinition Width="48"/>
                     <ColumnDefinition Width="400"/>
                 </Grid.ColumnDefinitions>
-                <Image Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" Width="32" Height="32" Source="{Binding FileIcon, TargetNullValue=pug.ico}"/>
+                <Image Grid.Column="0" VerticalAlignment="Center" HorizontalAlignment="Center" Width="32" Height="32" Source="{Binding FileIcon, TargetNullValue={StaticResource earth}}"/>
                 <StackPanel Grid.Column="1" Margin="0,2,0,2">
                     <TextBlock Foreground="White" FontWeight="SemiBold" FontSize="14" Text="{Binding Filename}"/>
                     <DockPanel Margin="0,2,0,2">
@@ -37,7 +38,7 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="20"/>
                         </Grid.ColumnDefinitions>
-                        <ProgressBar Grid.Column="0" Height="14" Minimum="0" Maximum="100" Background="{Binding Background, ElementName=itemGrid}" Value="{Binding Progress}"/>
+                        <ProgressBar Grid.Column="0" Height="14" Minimum="0" Maximum="100" Background="{Binding Background, ElementName=itemGrid}" Value="{Binding Progress}" IsIndeterminate="{Binding IsIndeterminate}" />
                         <Button Grid.Column="1" ToolTip="Cancel download" VerticalAlignment="Center" Command="{Binding Cancel}">
                             <Button.Template>
                                 <ControlTemplate>
@@ -66,13 +67,13 @@
                     <TextBlock Foreground="White" FontWeight="DemiBold">WebRelay</TextBlock>
                     <DockPanel>
                         <TextBlock FontSize="11" Foreground="White" HorizontalAlignment="Left" Text="{Binding Status}"/>
-                        <Button ToolTip="Shutdown" HorizontalAlignment="Right" VerticalAlignment="Bottom" Command="{Binding Cancel}" Margin="0,3,1,1">
+                        <Button HorizontalAlignment="Right" VerticalAlignment="Bottom" Command="{Binding Cancel}" Margin="0,3,1,1">
                             <Button.Template>
                                 <ControlTemplate>
                                     <Border BorderThickness="2" BorderBrush="#353535" Background="#252525" CornerRadius="3" Padding="2">
                                         <WrapPanel Margin="0,0,2,0">
                                             <Image Width="12" Height="12" Margin="2,0,4,0" Source="cancel.png"/>
-                                            <TextBlock FontSize="11" Foreground="White">Shutdown</TextBlock>
+                                            <TextBlock FontSize="12" Foreground="White">Close</TextBlock>
                                         </WrapPanel>
                                     </Border>
                                 </ControlTemplate>
