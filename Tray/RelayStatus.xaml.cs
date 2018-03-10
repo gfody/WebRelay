@@ -16,10 +16,11 @@ namespace WebRelay
 	{
 		public ObservableCollection<Item> Relays { get; }
 
-		public RelayStatus()
+		public RelayStatus(string idleStatus = null)
 		{
-			var dummy = new Item();
+			var dummy = new Item() { Status = idleStatus };
 			Relays = new ObservableCollection<Item>() { dummy };
+			dummy.Cancel = new Command(() => App.Current.Shutdown());
 			Relays.CollectionChanged += (s, e) => { dummy.Show = Relays.Count == 1; };
 
 			InitializeComponent();
@@ -84,7 +85,7 @@ namespace WebRelay
 			public bool Show { get => show; set { show = value; PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(Show))); } }
 
 			public ICommand Copy { get; }
-			public ICommand Cancel { get; }
+			public ICommand Cancel { get; set; }
 			public event PropertyChangedEventHandler PropertyChanged;
 		}
 
@@ -100,8 +101,20 @@ namespace WebRelay
 
 	public class RelayTemplateSelector : DataTemplateSelector
 	{
-		public override DataTemplate SelectTemplate(object item, DependencyObject container) =>
-			(container as FrameworkElement)?.FindResource(((RelayStatus.Item)item).NoItems ? "NoItemsTemplate" : "RelayTemplate") as DataTemplate;
+		//public override DataTemplate SelectTemplate(object item, DependencyObject container) =>
+		//	(container as FrameworkElement)?.FindResource(((RelayStatus.Item)item).NoItems ? "NoItemsTemplate" : "RelayTemplate") as DataTemplate;
+
+		public override DataTemplate SelectTemplate(object item, DependencyObject container)
+		{
+			try
+			{
+				return (container as FrameworkElement)?.FindResource(((RelayStatus.Item)item).NoItems ? "NoItemsTemplate" : "RelayTemplate") as DataTemplate;
+			}
+			catch
+			{
+				return base.SelectTemplate(item, container);
+			}
+		}
 	}
 
 	public class MockRelays
@@ -120,7 +133,7 @@ namespace WebRelay
 				Bps = "100KB/sec",
 			});
 
-			relays.Add(new RelayStatus.Item() { Show = true });
+			relays.Add(new RelayStatus.Item() { Show = true, Status = "listening on http://*:80/\r\nwebui enabled" });
 		}
 	}
 }

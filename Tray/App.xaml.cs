@@ -6,6 +6,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
@@ -51,6 +52,8 @@ namespace WebRelay
 				remoteHost = ConfigurationManager.AppSettings["remoteHost"];
 				listenPrefix = ConfigurationManager.AppSettings["listenPrefix"] ?? "http://*:80/";
 				urlBase = listenPrefix.Replace("*", hostName).Replace("+", hostName).Replace(":80", "");
+				var enableWebclient = bool.Parse(ConfigurationManager.AppSettings["enableWebClient"] ?? "true");
+				var maxConnections = int.Parse(ConfigurationManager.AppSettings["maxConnections"] ?? "8");
 
 				if (!string.IsNullOrEmpty(remoteHost))
 				{
@@ -65,15 +68,19 @@ namespace WebRelay
 				else
 				{
 					remote = false;
-					server = new RelayServer() { EnableBuiltinWebclient = bool.Parse(ConfigurationManager.AppSettings["enableWebClient"] ?? "true") };
+					server = new RelayServer() { EnableBuiltinWebclient = enableWebclient };
 					stop = new TaskCompletionSource<bool>();
-					listen = server.Listen(listenPrefix, int.Parse(ConfigurationManager.AppSettings["maxConnections"] ?? "8"), stop);
+					listen = server.Listen(listenPrefix, maxConnections, stop);
 					if (listen.IsFaulted) throw listen.Exception.InnerException;
 				}
 
 				urlBase += urlBase.EndsWith("/") ? "" : "/";
+				urlBase = Regex.Replace(urlBase, "localhost", hostName, RegexOptions.IgnoreCase);
 
-				relayStatus = new RelayStatus();
+				var idleStatus = $"{(remote ? "Relaying to" : "Listening on")} {urlBase}";
+				if (!remote) idleStatus += $"\r\nWebclient is {(enableWebclient ? "enabled" : "disabled")}\r\nMax connections {maxConnections}";
+
+				relayStatus = new RelayStatus(idleStatus);
 				notifyIcon = (TaskbarIcon)FindResource("NotifyIcon");
 				notifyIcon.TrayToolTip = relayStatus;
 				notifyIcon.DataContext = relayStatus;
