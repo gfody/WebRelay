@@ -34,14 +34,13 @@ namespace WebRelay
 			private string bps, status = "waiting for connection..";
 			private TimeSpan? remaining;
 
-			private bool show;
+			private bool show = true;
 			private bool isIndeterminate;
 			public bool NoItems { get; }
-			public Item() { NoItems = true; Show = false; }
+			public Item() { NoItems = true; }
 
 			public Item(string filename, long? size, string url, IRelay relay, ObservableCollection<Item> collection)
 			{
-				Show = true;
 				URL = url;
 				Filename = Path.GetFileName(filename);
 				TotalSize = size;
@@ -123,7 +122,7 @@ namespace WebRelay
 			{
 				new RelayStatus.Item("some file.dat", 12345, "http://fy.lc/s92jk", null, null),
 				new RelayStatus.Item(null, null, "http://localhost:81/s8j2k", null, null) { IsIndeterminate = true },
-				new RelayStatus.Item() { Show = true, Status = "Listening on http://*:80/\r\nWebclient is enabled" },
+				new RelayStatus.Item() { Status = "Listening on http://*:80/\r\nWebclient is enabled" },
 			};
 		}
 	}

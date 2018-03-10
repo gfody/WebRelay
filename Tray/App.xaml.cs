@@ -91,7 +91,10 @@ namespace WebRelay
 				if (e.Args.Length > 0)
 					AddRelay(e.Args[0]);
 				else
+				{
 					notifyIcon.Icon = appIcon;
+					ShowRelays();
+				}
 
 			}
 			catch (System.Net.HttpListenerException ex) when ((uint)ex.HResult == 0x80004005) // access denied
