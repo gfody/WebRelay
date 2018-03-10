@@ -198,6 +198,7 @@ namespace WebRelay
 					completed = new TaskCompletionSource<DownloadResult>();
 					connected = new TaskCompletionSource<TaskCompletionSource<bool>>();
 
+
 					// skip this result if there's a request pending..
 					if (request == requests.Peek())
 					{
@@ -207,7 +208,7 @@ namespace WebRelay
 							await Task.Delay(1000);
 							if (request != requests.Peek())
 							{
-								request.SetResult(true);
+								request.TrySetResult(true);
 								continue;
 							}
 						}
@@ -233,7 +234,7 @@ namespace WebRelay
 								return;
 						}
 					}
-					request.SetResult(true);
+					request.TrySetResult(true);
 				}
 			}
 
@@ -305,6 +306,11 @@ namespace WebRelay
 					completed.SetResult(DownloadResult.Partial);
 			}
 			catch (TaskCanceledException)
+			{
+				completed.SetResult(DownloadResult.Canceled);
+			}
+			// cannot close stream until all bytes are written..
+			catch (InvalidOperationException e) when ((uint)e.HResult == 0x80131509)
 			{
 				completed.SetResult(DownloadResult.Canceled);
 			}

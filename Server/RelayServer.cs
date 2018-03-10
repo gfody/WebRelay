@@ -17,7 +17,7 @@ namespace WebRelay
 	public class RelayServer : HttpTaskAsyncHandler
 	{
 		public bool EnableBuiltinWebclient = true;
-		public event Action<IRelay> OnSocketRelay;
+		public event Action<string, long?, string, IRelay> OnSocketRelay;
 		public override bool IsReusable => true;
 		public override async Task ProcessRequestAsync(HttpContext context) => await ProcessRequestAsync(new HttpContextWrapper(context));
 
@@ -106,7 +106,7 @@ namespace WebRelay
 
 				SocketRelay relay = new SocketRelay(context.WebSocket, filename, filesize, mimetype);
 				key = AddRelay(relay);
-				OnSocketRelay?.Invoke(relay);
+				OnSocketRelay?.Invoke(filename, filesize, key, relay);
 
 				await context.WebSocket.SendString($"code={key}", timeout.Token);
 
@@ -179,7 +179,7 @@ namespace WebRelay
 
 				else if (r.StartsWith($"{prefix}images."))
 					main = main.Replace(r.Replace($"{prefix}images.", ""),
-						$"data:{MimeMapping.GetMimeMapping(Path.GetExtension(r))};base64,{Convert.ToBase64String(asm.GetManifestResourceStream(r).ToArray())}");
+						$"data:{Path.GetExtension(r).GuessMimeType()};base64,{Convert.ToBase64String(asm.GetManifestResourceStream(r).ToArray())}");
 			}
 
 			using (var ms = new MemoryStream())
