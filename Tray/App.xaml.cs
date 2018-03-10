@@ -6,6 +6,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -26,6 +27,7 @@ namespace WebRelay
 		private Task<bool> listen;
 		private string hostName, remoteHost, listenPrefix, urlBase;
 		private bool remote, stayOpen;
+		private Icon appIcon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
 
 		private void Application_Startup(object sender, StartupEventArgs e)
 		{
@@ -84,9 +86,12 @@ namespace WebRelay
 				notifyIcon = (TaskbarIcon)FindResource("NotifyIcon");
 				notifyIcon.TrayToolTip = relayStatus;
 				notifyIcon.DataContext = relayStatus;
-				notifyIcon.Icon = ProgressIcon(0);
 
-				if (e.Args.Length > 0) AddRelay(e.Args[0]);
+				if (e.Args.Length > 0)
+					AddRelay(e.Args[0]);
+				else
+					notifyIcon.Icon = appIcon;
+
 			}
 			catch (System.Net.HttpListenerException ex) when ((uint)ex.HResult == 0x80004005) // access denied
 			{
@@ -125,8 +130,7 @@ namespace WebRelay
 			relay.OnProgress += (downloaded, total) =>
 			{
 				double sumtotal = relayStatus.Relays.Sum(x => x.TotalSize);
-				double sumdownloaded = relayStatus.Relays.Sum(x => x.Downloaded);
-				notifyIcon.Icon = ProgressIcon(sumtotal > 0 ? sumdownloaded / sumtotal : 0);
+				notifyIcon.Icon = ProgressIcon(sumtotal > 0 ? relayStatus.Relays.Sum(x => x.Downloaded) / sumtotal : 0);
 			};
 
 			relay.OnComplete += () =>
@@ -136,8 +140,13 @@ namespace WebRelay
 				{
 					notifyIcon.ShowBalloonTip(file.Name, "Download complete", BalloonIcon.Info);
 					relayStatus.Relays.Remove(status);
-					if (relayStatus.Relays.Count == 1 && !stayOpen)
-						Shutdown();
+					if (relayStatus.Relays.Count == 1)
+					{
+						if (stayOpen)
+							notifyIcon.Icon = appIcon;
+						else
+							Shutdown();
+					}
 				}));
 			};
 
@@ -147,13 +156,22 @@ namespace WebRelay
 				Current.Dispatcher.BeginInvoke((Action)(() =>
 				{
 					relayStatus.Relays.Remove(status);
-					if (relayStatus.Relays.Count == 1 && !stayOpen)
-						Shutdown();
+					if (relayStatus.Relays.Count == 1)
+					{
+						if (stayOpen)
+							notifyIcon.Icon = appIcon;
+						else
+							Shutdown();
+					}
 				}));
 			};
 
 			Clipboard.SetDataObject(urlBase + code, true);
 			relayStatus.Relays.Add(status);
+
+			double progressTotal = relayStatus.Relays.Sum(x => x.TotalSize);
+			notifyIcon.Icon = ProgressIcon(progressTotal > 0 ? relayStatus.Relays.Sum(x => x.Downloaded) / progressTotal : 0);
+
 			ShowRelays();
 		}
 
