@@ -8,6 +8,7 @@ using System.Net;
 using System.Net.WebSockets;
 using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
@@ -67,6 +68,7 @@ namespace WebRelay
 		private static ConcurrentDictionary<string, IRelay> activeRelays = new ConcurrentDictionary<string, IRelay>();
 		private static ConcurrentDictionary<string, Tuple<DateTime, int>> blockedHosts = new ConcurrentDictionary<string, Tuple<DateTime, int>>();
 		private static Timer blockedHostsCleanup = new Timer(x => blockedHosts.Clear(), null, 60000, 60000);
+		private static Regex botAgents = new Regex("bot|slack|facebook|whatsapp|discord|telegram|skype", RegexOptions.IgnoreCase | RegexOptions.Compiled);
 
 		private async Task HandleWebsocketRequest(WebSocketContext context)
 		{
@@ -129,7 +131,7 @@ namespace WebRelay
 			{
 				if (validCode)
 				{
-					if (activeRelays.TryGetValue(code, out IRelay relay))
+					if (activeRelays.TryGetValue(code, out IRelay relay) && !botAgents.IsMatch(context.Request.UserAgent))
 						await relay.HandleDownloadRequest(context);
 					else
 						context.Response.StatusCode = 410;

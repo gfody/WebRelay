@@ -16,7 +16,6 @@ namespace WebRelay
 	{
 		event Action OnStart, OnCancel, OnDisconnect, OnComplete;
 		event Action<long, long?> OnProgress;
-		string UserHostAddress { get; set; }
 		Task HandleDownloadRequest(HttpContextBase context);
 		void Cancel();
 	}
