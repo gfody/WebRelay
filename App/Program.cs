@@ -168,7 +168,7 @@ namespace WebRelay
 			else
 			{
 				relay = new LocalRelay(stream, options.FinalFilename, options.FinalContentType);
-				var server = new RelayServer() { EnableBuiltinWebclient = false };
+				var server = new RelayServer() { AcceptSocketConnections = false };
 				code = server.AddRelay(relay);
 				listenTask = server.Listen(options.ListenPrefix, options.MaxConnections.Value, done);
 				if (listenTask.IsFaulted) throw listenTask.Exception.InnerException;
