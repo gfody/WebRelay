@@ -52,6 +52,11 @@ public static class OneInstance
 		Marshal.FreeHGlobal(copyData.lpData);
 	}
 
+	public static void Dispose()
+	{
+		mmf.Dispose();
+	}
+
 	private static IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
 	{
 		if (msg == WM_COPYDATA)

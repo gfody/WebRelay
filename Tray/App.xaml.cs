@@ -1,12 +1,14 @@
 ﻿using Hardcodet.Wpf.TaskbarNotification;
 using System;
 using System.Configuration;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Security.Principal;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Windows;
@@ -99,12 +101,20 @@ namespace WebRelay
 			}
 			catch (System.Net.HttpListenerException ex) when ((uint)ex.HResult == 0x80004005) // access denied
 			{
-				MessageBox.Show($"Listen requires admin or an explicit urlacl for your listen prefix.. E.g.: netsh http add urlacl url={listenPrefix} user=everyone", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+				if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
+				{
+					OneInstance.Dispose();
+					Process.Start(new ProcessStartInfo(Assembly.GetEntryAssembly().Location, e.Args.Length > 0 ? e.Args[0] : "") { Verb = "runas" });
+				}
+				else
+					MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
 				Shutdown();
 			}
 			catch (Exception ex)
 			{
 				MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
 				Shutdown();
 			}
 		}
