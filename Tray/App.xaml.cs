@@ -171,7 +171,7 @@ namespace WebRelay
 			relay.OnCancel += () => Current.Dispatcher.BeginInvoke((Action)(() => RemoveAndShutdown()));
 			relay.OnComplete += () => Current.Dispatcher.BeginInvoke((Action)(() =>
 			{
-				notifyIcon.ShowBalloonTip(filename, "Download complete", BalloonIcon.Info);
+				notifyIcon.ShowBalloonTip(Path.GetFileName(filename), "Download complete", BalloonIcon.Info);
 				RemoveAndShutdown();
 			}));
 
