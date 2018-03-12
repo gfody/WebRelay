@@ -20,6 +20,18 @@ public static class OneInstance
 
 		try
 		{
+			mmf = MemoryMappedFile.CreateNew(globalName, 8);
+			messageWindow = new HwndSource(new HwndSourceParameters());
+			ChangeWindowMessageFilterEx(messageWindow.Handle, WM_COPYDATA, 1, IntPtr.Zero);
+			using (var w = mmf.CreateViewAccessor())
+				w.Write(0, (long)messageWindow.Handle);
+
+			messageWindow.AddHook(WndProc);
+
+			return true;
+		}
+		catch (IOException e) when ((uint)e.HResult == 0x800700B7) // already exists
+		{
 			mmf = MemoryMappedFile.OpenExisting(globalName);
 			using (var r = mmf.CreateViewAccessor())
 			{
@@ -28,18 +40,6 @@ public static class OneInstance
 
 				return false;
 			}
-		}
-		catch (FileNotFoundException)
-		{
-			messageWindow = new HwndSource(new HwndSourceParameters());
-			ChangeWindowMessageFilterEx(messageWindow.Handle, WM_COPYDATA, 1, IntPtr.Zero);
-			mmf = MemoryMappedFile.CreateNew(globalName, 8);
-			using (var w = mmf.CreateViewAccessor())
-				w.Write(0, (long)messageWindow.Handle);
-
-			messageWindow.AddHook(WndProc);
-
-			return true;
 		}
 	}
 
