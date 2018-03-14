@@ -131,7 +131,7 @@ namespace WebRelay
 			{
 				if (validCode)
 				{
-					if (activeRelays.TryGetValue(code, out IRelay relay) && !botAgents.IsMatch(context.Request.UserAgent))
+					if (activeRelays.TryGetValue(code, out IRelay relay) && !botAgents.IsMatch(context.Request.UserAgent ?? ""))
 						await relay.HandleDownloadRequest(context);
 					else
 						context.Response.StatusCode = 410;

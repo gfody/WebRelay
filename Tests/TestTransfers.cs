@@ -55,7 +55,11 @@ namespace WebRelay.Tests
 			var code = server.AddRelay(new LocalRelay(stream));
 
 			using (var client = new WebClient())
-				CollectionAssert.AreEqual(data, client.DownloadData(downloadUrl + code));
+			{
+				var downloaded = client.DownloadData(downloadUrl + code);
+				if (listen.IsFaulted) throw listen.Exception.InnerException;
+				CollectionAssert.AreEqual(data, downloaded);
+			}
 		}
 
 		private void SocketDownload(int size, bool pipe = false)
@@ -66,7 +70,11 @@ namespace WebRelay.Tests
 			var code = socket.AddRelay(websocketUrl, stream).Result;
 
 			using (var client = new WebClient())
-				CollectionAssert.AreEqual(data, client.DownloadData(downloadUrl + code));
+			{
+				var downloaded = client.DownloadData(downloadUrl + code);
+				if (listen.IsFaulted) throw listen.Exception.InnerException;
+				CollectionAssert.AreEqual(data, downloaded);
+			}
 		}
 
 		[TestMethod] public void Local_Empty() => LocalDownload(0);
