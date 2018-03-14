@@ -174,7 +174,7 @@ namespace WebRelay
 				if (listenTask.IsFaulted) throw listenTask.Exception.InnerException;
 			}
 
-			int lastLen = Console.BufferWidth;
+			int lastLen = Console.BufferWidth - 1;
 			void PrintStatus(string status)
 			{
 				string line = string.Format("Status: {0}", status);
