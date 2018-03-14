@@ -1,4 +1,5 @@
 ﻿using Hardcodet.Wpf.TaskbarNotification;
+using Microsoft.Win32;
 using System;
 using System.Configuration;
 using System.Diagnostics;
@@ -27,21 +28,18 @@ namespace WebRelay
 		private RelayServer server;
 		private TaskCompletionSource<bool> stop;
 		private Task<bool> listen;
-		private string hostName, remoteHost, listenPrefix, urlBase;
-		private bool remote, stayOpen;
+		private string urlBase;
+		private string hostName = ConfigurationManager.AppSettings["hostname"] ?? Environment.MachineName;
+		private string remoteHost = ConfigurationManager.AppSettings["remoteHost"];
+		private string listenPrefix = ConfigurationManager.AppSettings["listenPrefix"] ?? "http://*:80/";
+		private bool remote, stayOpen = bool.Parse(ConfigurationManager.AppSettings["stayOpen"] ?? "true");
 		private Icon appIcon = Icon.ExtractAssociatedIcon(Assembly.GetExecutingAssembly().Location);
 
 		private void Application_Startup(object sender, StartupEventArgs e)
 		{
+			bool isAdmin = new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator);
 			try
 			{
-				stayOpen = bool.Parse(ConfigurationManager.AppSettings["stayOpen"] ?? "true");
-				if (e.Args.Length == 0 && !stayOpen)
-				{
-					Shutdown();
-					return;
-				}
-
 				if (OneInstance.First())
 					OneInstance.OnMessage += AddRelay;
 
@@ -52,11 +50,21 @@ namespace WebRelay
 					return;
 				}
 
-				hostName = ConfigurationManager.AppSettings["hostname"] ?? Environment.MachineName;
-				remoteHost = ConfigurationManager.AppSettings["remoteHost"];
-				listenPrefix = ConfigurationManager.AppSettings["listenPrefix"] ?? "http://*:80/";
+				if (e.Args.Length == 0)
+				{
+					if (isAdmin)
+						InstallRegistry();
+
+					if (!stayOpen)
+					{
+						Shutdown();
+						return;
+					}
+				}
+
 				urlBase = listenPrefix.Replace("*", hostName).Replace("+", hostName).Replace(":80", "");
 				var enableWebclient = bool.Parse(ConfigurationManager.AppSettings["enableWebClient"] ?? "true");
+				var acceptRelays = bool.Parse(ConfigurationManager.AppSettings["acceptRelays"] ?? "true");
 				var maxConnections = int.Parse(ConfigurationManager.AppSettings["maxConnections"] ?? "8");
 
 				if (!string.IsNullOrEmpty(remoteHost))
@@ -72,7 +80,7 @@ namespace WebRelay
 				else
 				{
 					remote = false;
-					server = new RelayServer() { EnableBuiltinWebclient = enableWebclient };
+					server = new RelayServer() { EnableBuiltinWebclient = enableWebclient, AcceptSocketConnections = acceptRelays };
 					stop = new TaskCompletionSource<bool>();
 					listen = server.Listen(listenPrefix, maxConnections, stop);
 					if (listen.IsFaulted) throw listen.Exception.InnerException;
@@ -83,7 +91,10 @@ namespace WebRelay
 				urlBase = Regex.Replace(urlBase, "localhost", hostName, RegexOptions.IgnoreCase);
 
 				var idleStatus = $"{(remote ? "Relaying to" : "Listening on")} {urlBase}";
-				if (!remote) idleStatus += $"\r\nWebclient is {(enableWebclient ? "enabled" : "disabled")}\r\nMax connections {maxConnections}";
+				if (!remote) idleStatus +=
+						$"\r\n{(acceptRelays ? "Accepting" : "Not accepting")} relays" +
+						$"\r\nWebclient is {(enableWebclient ? "enabled" : "disabled")}" +
+						$"\r\n{maxConnections} max connections";
 
 				relayStatus = new RelayStatus(idleStatus);
 				notifyIcon = (TaskbarIcon)FindResource("NotifyIcon");
@@ -97,11 +108,10 @@ namespace WebRelay
 					notifyIcon.Icon = appIcon;
 					ShowRelays();
 				}
-
 			}
 			catch (System.Net.HttpListenerException ex) when ((uint)ex.HResult == 0x80004005) // access denied
 			{
-				if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
+				if (!isAdmin)
 				{
 					OneInstance.Dispose();
 					Process.Start(new ProcessStartInfo(Assembly.GetEntryAssembly().Location, e.Args.Length > 0 ? e.Args[0] : "") { Verb = "runas" });
@@ -121,25 +131,35 @@ namespace WebRelay
 
 		private async void AddRelay(string filename)
 		{
-			IRelay relay;
-			var file = new FileInfo(filename);
-			var stream = file.OpenRead();
-			string code;
-			if (remote)
+			try
 			{
-				relay = new SocketRelayClient();
-				code = await (relay as SocketRelayClient).AddRelay(new Uri(remoteHost), stream, file.Name);
-			}
-			else
-			{
-				relay = new LocalRelay(stream, file.Name);
-				code = server.AddRelay(relay);
-			}
+				IRelay relay;
+				var file = new FileInfo(filename);
+				var stream = file.OpenRead();
+				string code;
+				if (remote)
+				{
+					relay = new SocketRelayClient();
+					code = await (relay as SocketRelayClient).AddRelay(new Uri(remoteHost), stream, file.Name);
+				}
+				else
+				{
+					relay = new LocalRelay(stream, file.Name);
+					code = server.AddRelay(relay);
+				}
 
-			relay.OnComplete += () => stream.Close();
-			relay.OnCancel += () => stream.Close();
-			AddRelayStatus(file.FullName, file.Length, urlBase + code, relay);
-			Clipboard.SetDataObject(urlBase + code, true);
+				relay.OnComplete += () => stream.Close();
+				relay.OnCancel += () => stream.Close();
+				AddRelayStatus(file.FullName, file.Length, urlBase + code, relay);
+				Clipboard.SetDataObject(urlBase + code, true);
+			}
+			catch (Exception e)
+			{
+				MessageBox.Show(e.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+
+				if (relayStatus.Relays.Count == 1 && !stayOpen)
+					Shutdown();
+			}
 		}
 
 		private void AddRelayStatus(string filename, long? filesize, string url, IRelay relay)
@@ -245,6 +265,20 @@ namespace WebRelay
 
 					return new Icon(ms);
 				}
+			}
+		}
+
+		private void InstallRegistry()
+		{
+			var appPath = $"\"{Assembly.GetExecutingAssembly().Location}\"";
+			var root = $@"HKEY_CLASSES_ROOT\*\shell\{nameof(WebRelay)}";
+			var cmd = $@"{root}\command";
+
+			if ((string)Registry.GetValue(cmd, "", null) != appPath)
+			{
+				Registry.SetValue(root, "", "Copy download link");
+				Registry.SetValue(root, "Icon", appPath);
+				Registry.SetValue($@"{root}\command", "", $"{appPath} \"%1\"");
 			}
 		}
 	}
