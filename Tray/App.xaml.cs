@@ -114,7 +114,7 @@ namespace WebRelay
 				if (!isAdmin)
 				{
 					OneInstance.Dispose();
-					Process.Start(new ProcessStartInfo(Assembly.GetEntryAssembly().Location, e.Args.Length > 0 ? e.Args[0] : "") { Verb = "runas" });
+					Process.Start(new ProcessStartInfo(Assembly.GetEntryAssembly().Location, e.Args.Length > 0 ? $"\"{e.Args[0]}\"" : "") { Verb = "runas" });
 				}
 				else
 					MessageBox.Show(ex.Message, "Error", MessageBoxButton.OK, MessageBoxImage.Error);
