@@ -1,8 +1,8 @@
 ## Summary
-This is a utility for sharing files or streams via HTTP. It can host locally/directly or relay through a remote host. You can try out the web client at [http://fy.lc](http://fy.lc). The server can be hosted in IIS as well and is very easy to publish to Azure as a single-file Web App.
+This is a utility for sharing files or streams via HTTP. It can host locally/directly or relay through a remote host. You can try out the web client at [http://xkcd949.com](http://xkcd949.com). The server can be hosted in IIS as well and is very easy to publish to Azure as a single-file Web App.
 
 ## Installation
-Download the [release package](https://github.com/gfody/WebRelay/releases/download/v1.0/WebRelay.zip) and unpack it somewhere (preferably in your PATH if you'll be using the CLI). Run WebrelayTray.exe once as administrator with no arguments to install the registry key for the context menu (`[HKEY_CLASSES_ROOT\*\shell\WebRelay]`). For relaying you're good to go. For using the built-in server you may need to add acls for the ports you'll be using (`netsh http add urlacl url=http://*:80/` this isn't necessary if you run as administrator) and take care of any necessary firewall and/or router config.
+Download the [release package](../../releases/download/v1.1/WebRelay.zip) and unpack it somewhere (preferably in your PATH if you'll be using the CLI). Run WebrelayTray.exe once as administrator with no arguments to install the registry key for the context menu (`[HKEY_CLASSES_ROOT\*\shell\WebRelay]`). For relaying you're good to go. For using the built-in server you may need to add acls for the ports you'll be using (`netsh http add urlacl url=http://*:80/` this isn't necessary if you run as administrator) and take care of any necessary firewall and/or router config.
 
 ## Usage
 ### Webrelay
@@ -18,7 +18,7 @@ Parameter | Description
 ----------|------------
 inputFile | File to host, by default it will read from stdin
 listenPrefix | Hostname and port on which to listen (in the [UrlPrefix format](https://msdn.microsoft.com/en-us/library/windows/desktop/aa364698(v=vs.85).aspx) e.g.: "http://*:80/")
-remoteHost | Remote instance to relay through instead of listening on this machine (e.g.: "ws://fy.lc")
+remoteHost | Remote instance to relay through instead of listening on this machine (e.g.: "ws://xkcd949.com")
 filename | Value to be used in content-disposition header, defaults to input filename unless `--inline` is specified
 inline | Use content-disposition: inline (no download prompt)
 contentType | Value to be used in content-type header, if left blank this will be inferred from the filename and defaults to "text/plain" if filename is blank
