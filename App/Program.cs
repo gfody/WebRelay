@@ -141,7 +141,7 @@ namespace WebRelay
 
 		private static void HandleRelay(Stream stream, Options options)
 		{
-			IRelay relay; string code, urlBase = options.ListenPrefix.Replace("*", HostName).Replace("+", HostName).Replace(":80", "");
+			IRelay relay; string code, urlBase = options.ListenPrefix.Replace("*", HostName).Replace("+", HostName).Replace(":80/", "/");
 			var done = new TaskCompletionSource<bool>();
 			Task<bool> listenTask = null;
 

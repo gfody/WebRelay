@@ -62,7 +62,7 @@ namespace WebRelay
 					}
 				}
 
-				urlBase = listenPrefix.Replace("*", hostName).Replace("+", hostName).Replace(":80", "");
+				urlBase = listenPrefix.Replace("*", hostName).Replace("+", hostName).Replace(":80/", "/");
 				var enableWebclient = bool.Parse(ConfigurationManager.AppSettings["enableWebClient"] ?? "true");
 				var acceptRelays = bool.Parse(ConfigurationManager.AppSettings["acceptRelays"] ?? "true");
 				var maxConnections = int.Parse(ConfigurationManager.AppSettings["maxConnections"] ?? "8");
